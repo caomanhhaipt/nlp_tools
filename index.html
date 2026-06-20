@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NLP Annotation Tools</title>
+<style>
+:root {
+  --ground:   #f7f8fa;
+  --text:     #1a1a1a;
+  --muted:    #5a6070;
+  --accent:   #1565c0;
+  --accent2:  #e65100;
+  --pos:      #2e7d32;
+  --neg:      #c62828;
+  --neu:      #616161;
+  --tgt-bg:   #bbdefb;
+  --opi-bg:   #ffe0b2;
+  --border:   #d0d4da;
+  --card:     #ffffff;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--ground);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* ── Header ─────────────────────────────────── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 40px;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.logo {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+nav { display: flex; gap: 4px; }
+
+nav a {
+  font-size: 13px;
+  color: var(--text);
+  text-decoration: none;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-weight: 500;
+  transition: background 0.15s, border-color 0.15s;
+}
+nav a:hover { background: #eef1f6; border-color: var(--border); }
+nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ── Hero ────────────────────────────────────── */
+.hero {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 72px 40px 52px;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.hero-tagline {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 44px;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Demo box ────────────────────────────────── */
+.demo-wrap {
+  position: relative;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: visible;
+  margin-bottom: 14px;
+}
+
+.demo-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+
+.demo-dot:nth-child(1) { background: #ff5f57; }
+.demo-dot:nth-child(2) { background: #ffbd2e; }
+.demo-dot:nth-child(3) { background: #28c840; }
+
+.demo-label {
+  font-size: 11px;
+  color: var(--muted);
+  margin-left: 6px;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+.demo-canvas {
+  position: relative;
+  padding: 0 24px 22px;
+  overflow-x: auto;
+}
+
+#demoSvg {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 76px;
+  overflow: visible;
+  pointer-events: none;
+}
+
+#demoTokens {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 2px;
+  align-items: center;
+  justify-content: center;
+  padding-top: 78px;
+  min-width: max-content;
+  margin: 0 auto;
+}
+
+.dtok {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 15px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  border: 1.5px solid transparent;
+  transition: background 0.28s ease, border-color 0.28s ease;
+  user-select: none;
+}
+
+.dtok.hi-tgt { background: var(--tgt-bg); border-color: var(--accent); }
+.dtok.hi-opi { background: var(--opi-bg); border-color: var(--accent2); }
+
+.demo-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.leg-swatch {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+  border: 1px solid transparent;
+}
+
+/* ── Tool cards ──────────────────────────────── */
+.tools {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 40px 80px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.tool-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 26px;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  transition: border-color 0.18s, box-shadow 0.18s, transform 0.15s;
+}
+
+.tool-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 4px 24px rgba(21, 101, 192, 0.11);
+  transform: translateY(-2px);
+}
+
+.tool-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tc-icon { font-size: 28px; line-height: 1; }
+
+.tc-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.tc-desc {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.tc-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+
+.tag {
+  font-size: 11px;
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.tag-tgt { background: var(--tgt-bg);  color: var(--accent); }
+.tag-opi { background: var(--opi-bg);  color: var(--accent2); }
+.tag-pos { background: #c8e6c9;        color: var(--pos); }
+.tag-neg { background: #ffcdd2;        color: var(--neg); }
+.tag-neu { background: #e3f2fd;        color: var(--neu); }
+
+.tc-cta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  margin-top: 2px;
+}
+
+.tc-arrow { transition: transform 0.2s; display: inline-block; }
+.tool-card:hover .tc-arrow { transform: translateX(4px); }
+
+/* ── Footer ──────────────────────────────────── */
+footer {
+  text-align: center;
+  padding: 22px;
+  font-size: 12px;
+  color: #aaa;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Responsive ──────────────────────────────── */
+@media (max-width: 560px) {
+  header { padding: 12px 16px; }
+  .hero  { padding: 48px 16px 36px; }
+  .tools { grid-template-columns: 1fr; padding: 0 16px 48px; }
+  .dtok  { font-size: 13px; padding: 4px 7px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dtok, .tool-card, nav a, .tc-arrow { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">🏷️ NLP Annotation Tools</span>
+  <nav>
+    <a href="aste.html">ASTE</a>
+    <a href="ser.html">SER</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <span class="eyebrow">Annotation Toolset</span>
+    <p class="hero-tagline">Không cài đặt, không server — mở file HTML và bắt đầu ngay.</p>
+
+    <div class="demo-wrap">
+      <div class="demo-bar">
+        <div class="demo-dot"></div>
+        <div class="demo-dot"></div>
+        <div class="demo-dot"></div>
+        <span class="demo-label">aste.html</span>
+      </div>
+      <div class="demo-canvas">
+        <svg id="demoSvg" aria-hidden="true"></svg>
+        <div id="demoTokens" role="img" aria-label="Demo gán nhãn ASTE"></div>
+      </div>
+      <div class="demo-legend">
+        <span>
+          <i class="leg-swatch" style="background:var(--tgt-bg);border-color:var(--accent)"></i>Target
+        </span>
+        <span>
+          <i class="leg-swatch" style="background:var(--opi-bg);border-color:var(--accent2)"></i>Opinion
+        </span>
+        <span>
+          <i class="leg-swatch" style="background:#c8e6c9;border-color:var(--pos)"></i>POS
+        </span>
+        <span>
+          <i class="leg-swatch" style="background:#ffcdd2;border-color:var(--neg)"></i>NEG
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <section class="tools">
+    <a class="tool-card" href="aste.html">
+      <div class="tc-icon">📝</div>
+      <div class="tc-name">ASTE Annotation</div>
+      <div class="tc-desc">Gán nhãn triplet (target, opinion, sentiment) cho câu văn bản. Bôi đen để tạo span, kéo để nối mũi tên.</div>
+      <div class="tc-tags">
+        <span class="tag tag-tgt">TARGET</span>
+        <span class="tag tag-opi">OPINION</span>
+        <span class="tag tag-pos">POS</span>
+        <span class="tag tag-neg">NEG</span>
+        <span class="tag tag-neu">NEU</span>
+      </div>
+      <div class="tc-cta">Mở tool <span class="tc-arrow">→</span></div>
+    </a>
+
+    <a class="tool-card" href="ser.html">
+      <div class="tc-icon">🎙️</div>
+      <div class="tc-name">SER Annotation</div>
+      <div class="tc-desc">Nghe file .wav và gán nhãn cảm xúc. Waveform trực quan, phím tắt đầy đủ, tự lưu nháp vào trình duyệt.</div>
+      <div class="tc-tags">
+        <span class="tag tag-neg">Negative</span>
+        <span class="tag tag-neu">Neutral</span>
+        <span class="tag tag-pos">Positive</span>
+      </div>
+      <div class="tc-cta">Mở tool <span class="tc-arrow">→</span></div>
+    </a>
+  </section>
+</main>
+
+<footer>Chạy hoàn toàn offline · Không gửi dữ liệu về server</footer>
+
+<script>
+"use strict";
+
+const TOKENS = [
+  {w:'The',      role:null,  g:0},
+  {w:'battery',  role:'tgt', g:1},
+  {w:'life',     role:'tgt', g:1},
+  {w:'is',       role:null,  g:0},
+  {w:'amazing',  role:'opi', g:1},
+  {w:'but',      role:null,  g:0},
+  {w:'the',      role:null,  g:0},
+  {w:'screen',   role:'tgt', g:2},
+  {w:'is',       role:null,  g:0},
+  {w:'terrible', role:'opi', g:2},
+];
+
+const ARCS = [
+  {g:1, label:'POS', color:'#2e7d32'},
+  {g:2, label:'NEG', color:'#c62828'},
+];
+
+const wrap = document.getElementById('demoSvg').closest('.demo-canvas');
+const svg  = document.getElementById('demoSvg');
+const row  = document.getElementById('demoTokens');
+
+TOKENS.forEach(t => {
+  const el = document.createElement('span');
+  el.className = 'dtok';
+  el.textContent = t.w;
+  row.appendChild(el);
+});
+
+const tokEls = () => [...row.querySelectorAll('.dtok')];
+
+function ns(tag) {
+  return document.createElementNS('http://www.w3.org/2000/svg', tag);
+}
+
+function cx(el) {
+  const wr = wrap.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  return er.left + er.width / 2 - wr.left;
+}
+
+function topY(el) {
+  const wr = wrap.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  return er.top - wr.top;
+}
+
+function renderArcs(groups, animated) {
+  svg.innerHTML = '';
+  const defs = ns('defs');
+  svg.appendChild(defs);
+
+  const els = tokEls();
+
+  groups.forEach(arc => {
+    const tgts = TOKENS.map((t,i) => t.g===arc.g && t.role==='tgt' ? els[i] : null).filter(Boolean);
+    const opis = TOKENS.map((t,i) => t.g===arc.g && t.role==='opi' ? els[i] : null).filter(Boolean);
+    if (!tgts.length || !opis.length) return;
+
+    const x1 = tgts.reduce((s,e) => s + cx(e), 0) / tgts.length;
+    const x2 = opis.reduce((s,e) => s + cx(e), 0) / opis.length;
+    const y  = topY(tgts[0]) - 5;
+    const h  = Math.max(36, Math.abs(x2 - x1) * 0.52);
+    const d  = `M ${x1} ${y} C ${x1} ${y-h} ${x2} ${y-h} ${x2} ${y}`;
+
+    // Arrowhead marker
+    const mid = `ah${arc.g}`;
+    const marker = ns('marker');
+    marker.setAttribute('id', mid);
+    marker.setAttribute('markerWidth', '9');
+    marker.setAttribute('markerHeight', '9');
+    marker.setAttribute('refX', '7');
+    marker.setAttribute('refY', '3');
+    marker.setAttribute('orient', 'auto');
+    const mp = ns('path');
+    mp.setAttribute('d', 'M0,0 L7,3 L0,6 Z');
+    mp.setAttribute('fill', arc.color);
+    marker.appendChild(mp);
+    defs.appendChild(marker);
+
+    // Arc path
+    const path = ns('path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', arc.color);
+    path.setAttribute('stroke-width', '2');
+    path.setAttribute('marker-end', `url(#${mid})`);
+    if (animated) {
+      path.setAttribute('stroke-dasharray', '350');
+      path.setAttribute('stroke-dashoffset', '350');
+      path.style.transition = 'stroke-dashoffset 0.55s ease';
+    }
+
+    // Label rect + text
+    const lx = (x1 + x2) / 2;
+    const ly = y - h * 0.78;
+
+    const rect = ns('rect');
+    rect.setAttribute('x', lx - 15); rect.setAttribute('y', ly - 9);
+    rect.setAttribute('width', 30);  rect.setAttribute('height', 16);
+    rect.setAttribute('rx', 4);
+    rect.setAttribute('fill', '#fff');
+    rect.setAttribute('stroke', arc.color);
+    if (animated) { rect.style.opacity = '0'; rect.style.transition = 'opacity 0.3s ease 0.48s'; }
+
+    const txt = ns('text');
+    txt.setAttribute('x', lx);   txt.setAttribute('y', ly + 4);
+    txt.setAttribute('text-anchor', 'middle');
+    txt.setAttribute('font-size', '10');
+    txt.setAttribute('font-weight', '700');
+    txt.setAttribute('font-family', 'ui-monospace, monospace');
+    txt.setAttribute('fill', arc.color);
+    txt.textContent = arc.label;
+    if (animated) { txt.style.opacity = '0'; txt.style.transition = 'opacity 0.3s ease 0.48s'; }
+
+    svg.appendChild(path);
+    svg.appendChild(rect);
+    svg.appendChild(txt);
+
+    if (animated) {
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        path.setAttribute('stroke-dashoffset', '0');
+        rect.style.opacity = '1';
+        txt.style.opacity = '1';
+      }));
+    }
+  });
+}
+
+// Animation sequence
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const SEQ = [
+  { t: 500,  fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===1 && TOKENS[i].role==='tgt') el.classList.add('hi-tgt'); }); }},
+  { t: 1050, fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===1 && TOKENS[i].role==='opi') el.classList.add('hi-opi'); }); }},
+  { t: 1600, fn() { renderArcs([ARCS[0]], true); }},
+  { t: 2450, fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===2 && TOKENS[i].role==='tgt') el.classList.add('hi-tgt'); }); }},
+  { t: 3000, fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===2 && TOKENS[i].role==='opi') el.classList.add('hi-opi'); }); }},
+  { t: 3550, fn() { renderArcs(ARCS, true); }},
+  { t: 6200, fn() { reset(); }},
+];
+
+let timers = [];
+
+function reset() {
+  tokEls().forEach(el => { el.className = 'dtok'; });
+  svg.innerHTML = '';
+  timers.push(setTimeout(run, 700));
+}
+
+function run() {
+  timers.forEach(clearTimeout); timers = [];
+  if (reducedMotion) {
+    // Show final state immediately without animation
+    tokEls().forEach((el,i) => {
+      if (TOKENS[i].role === 'tgt') el.classList.add('hi-tgt');
+      if (TOKENS[i].role === 'opi') el.classList.add('hi-opi');
+    });
+    renderArcs(ARCS, false);
+    return;
+  }
+  SEQ.forEach(s => timers.push(setTimeout(s.fn, s.t)));
+}
+
+// Resize: redraw visible arcs
+let rsz;
+window.addEventListener('resize', () => {
+  clearTimeout(rsz);
+  rsz = setTimeout(() => {
+    const els = tokEls();
+    const visible = ARCS.filter(a =>
+      TOKENS.some((t,i) => t.g===a.g && t.role==='opi' && els[i].classList.contains('hi-opi'))
+    );
+    if (visible.length) renderArcs(visible, false);
+  }, 80);
+});
+
+setTimeout(run, 300);
+</script>
+
+</body>
+</html>
