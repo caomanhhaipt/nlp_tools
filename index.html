@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NLP Annotation Tools</title>
+<title>Công cụ Gán nhãn NLP</title>
 <style>
 :root {
   --ground:   #f7f8fa;
@@ -285,7 +285,7 @@ footer {
 <body>
 
 <header>
-  <span class="logo">🏷️ NLP Annotation Tools</span>
+  <span class="logo">🏷️ Công cụ Gán nhãn NLP</span>
   <nav>
     <a href="aste.html">ASTE</a>
     <a href="ser.html">SER</a>
@@ -294,7 +294,7 @@ footer {
 
 <main>
   <section class="hero">
-    <span class="eyebrow">Annotation Toolset</span>
+    <span class="eyebrow">Bộ công cụ gán nhãn</span>
     <p class="hero-tagline">Không cài đặt, không server — mở file HTML và bắt đầu ngay.</p>
 
     <div class="demo-wrap">
@@ -328,7 +328,7 @@ footer {
   <section class="tools">
     <a class="tool-card" href="aste.html">
       <div class="tc-icon">📝</div>
-      <div class="tc-name">ASTE Annotation</div>
+      <div class="tc-name">Gán nhãn ASTE</div>
       <div class="tc-desc">Gán nhãn triplet (target, opinion, sentiment) cho câu văn bản. Bôi đen để tạo span, kéo để nối mũi tên.</div>
       <div class="tc-tags">
         <span class="tag tag-tgt">TARGET</span>
@@ -342,7 +342,7 @@ footer {
 
     <a class="tool-card" href="ser.html">
       <div class="tc-icon">🎙️</div>
-      <div class="tc-name">SER Annotation</div>
+      <div class="tc-name">Gán nhãn SER</div>
       <div class="tc-desc">Nghe file .wav và gán nhãn cảm xúc. Waveform trực quan, phím tắt đầy đủ, tự lưu nháp vào trình duyệt.</div>
       <div class="tc-tags">
         <span class="tag tag-neg">Negative</span>
@@ -360,16 +360,14 @@ footer {
 "use strict";
 
 const TOKENS = [
-  {w:'The',      role:null,  g:0},
-  {w:'battery',  role:'tgt', g:1},
-  {w:'life',     role:'tgt', g:1},
-  {w:'is',       role:null,  g:0},
-  {w:'amazing',  role:'opi', g:1},
-  {w:'but',      role:null,  g:0},
-  {w:'the',      role:null,  g:0},
-  {w:'screen',   role:'tgt', g:2},
-  {w:'is',       role:null,  g:0},
-  {w:'terrible', role:'opi', g:2},
+  {w:'Dịch',   role:'tgt', g:1},
+  {w:'vụ',     role:'tgt', g:1},
+  {w:'tuyệt',  role:'opi', g:1},
+  {w:'vời',    role:'opi', g:1},
+  {w:'nhưng',  role:null,  g:0},
+  {w:'giá',    role:'tgt', g:2},
+  {w:'quá',    role:'opi', g:2},
+  {w:'cao',    role:'opi', g:2},
 ];
 
 const ARCS = [
