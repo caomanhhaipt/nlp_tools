@@ -46,12 +46,12 @@ token1 token2 ...#### #### ####[([idx_target], [idx_opinion], 'SENTIMENT')]
 
 **Ví dụ:**
 ```
-The battery life is amazing but the screen is terrible#### #### ####[([1, 2], [4], 'POS'), ([7], [9], 'NEG')]
+Dịch vụ tuyệt vời nhưng giá quá cao#### #### ####[([0, 1], [2, 3], 'POS'), ([5], [6, 7], 'NEG')]
 ```
 
 File **chưa có annotation** (câu trắng):
 ```
-Service was excellent and food tasted wonderful#### #### ####[]
+Chất lượng âm thanh rất ổn định và pin dùng được lâu#### #### ####[]
 ```
 
 ---
