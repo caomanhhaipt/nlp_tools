@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASTE Annotation Tool</title>
+<style>
+  :root{
+    --tgt:#1565c0; --tgt-bg:#bbdefb;
+    --opi:#e65100; --opi-bg:#ffe0b2;
+    --pos:#2e7d32; --neg:#c62828; --neu:#616161;
+    --border:#d0d4da; --muted:#666; --sel:#fff59d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;background:#f5f6f8}
+  button{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:6px 10px;font-size:13px}
+  button:hover{background:#f0f2f5}
+  button.primary{background:#1565c0;color:#fff;border-color:#1565c0}
+  button.primary:hover{background:#0d47a1}
+  select{font-family:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:#fff}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #topbar{display:flex;gap:12px;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  #topbar h1{font-size:16px;margin:0 8px 0 0}
+  #layout{display:grid;grid-template-columns:240px 1fr 320px;height:calc(100vh - 53px)}
+  #sidebar{border-right:1px solid var(--border);background:#fff;overflow-y:auto}
+  #right{border-left:1px solid var(--border);background:#fff;overflow-y:auto}
+  #right .shead{padding:8px 12px;font-size:12px;color:var(--muted);position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border)}
+  #inspector{padding:12px}
+  #inspector .ttl{font-size:12px;color:var(--muted);margin:10px 0 4px}
+  #inspector .big{font-size:16px;font-weight:600;margin-bottom:6px}
+  #inspector button{margin-top:6px}
+  .tok.inspsel{outline:2px dashed #333;outline-offset:2px}
+  #sidebar .shead{padding:8px 12px;font-size:12px;color:var(--muted);position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border)}
+  .sitem{padding:7px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:13px;display:flex;gap:8px;align-items:center}
+  .sitem:hover{background:#f5f8ff}
+  .sitem.active{background:#e3f2fd;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#cfd4da}
+  .dot.edited{background:#f9a825}
+  .dot.confirmed{background:#2e7d32}
+  .sitem .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #main{padding:16px 18px;overflow-y:auto}
+  .panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px}
+  .hint{font-size:12px;color:var(--muted);margin:4px 0}
+  #canvasWrap{overflow-x:auto;border:1px solid var(--border);border-radius:10px;background:#fff;padding:0}
+  #canvas{position:relative;width:max-content;min-width:100%;padding:0 16px}
+  #arcs{position:absolute;top:0;left:0;overflow:visible;z-index:3}
+  #tokenRow{z-index:1}
+  #tokenRow{position:relative;white-space:nowrap;padding-bottom:14px}
+  .tok{display:inline-block;padding:5px 7px;margin:0 2px;border-radius:6px;font-size:16px;border:1px solid transparent;user-select:none}
+  .tok.tgt{background:var(--tgt-bg);border-color:var(--tgt)}
+  .tok.opi{background:var(--opi-bg);border-color:var(--opi)}
+  .tok.both{background:linear-gradient(135deg,var(--tgt-bg) 50%,var(--opi-bg) 50%)}
+  .tok.selrange{outline:2px solid var(--sel);outline-offset:1px;background:var(--sel)}
+  .tok.idx{position:relative}
+  .tok .num{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:9px;color:#999}
+  /* nối liền các token cùng 1 span: lấp khoảng trắng + bo góc trong vuông */
+  .tok.cr-t,.tok.cr-o{border-top-right-radius:0;border-bottom-right-radius:0;border-right-color:transparent}
+  .tok.cl-t,.tok.cl-o{border-top-left-radius:0;border-bottom-left-radius:0;border-left-color:transparent}
+  .tok.cr-t::after,.tok.cr-o::after{content:"";position:absolute;top:-1px;bottom:-1px;right:-5px;width:6px;border-top:1px solid;border-bottom:1px solid}
+  .tok.cr-t::after{background:var(--tgt-bg);border-color:var(--tgt)}
+  .tok.cr-o::after{background:var(--opi-bg);border-color:var(--opi)}
+  .chip{display:inline-block;padding:2px 7px;border-radius:5px;font-size:12px}
+  .chip.tgt{background:var(--tgt-bg);color:var(--tgt)}
+  .chip.opi{background:var(--opi-bg);color:var(--opi)}
+  .listrow{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid #f1f1f1;font-size:13px;flex-wrap:wrap}
+  .listrow.sel{background:#fffde7}
+  .pos{color:var(--pos);font-weight:600}.neg{color:var(--neg);font-weight:600}.neu{color:var(--neu);font-weight:600}
+  .legend span{font-size:12px;margin-right:12px}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:middle;margin-right:4px}
+  #popup{position:fixed;z-index:50;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.18);padding:8px;display:none}
+  #popup button{margin:2px}
+  .x{color:#c62828;border-color:#f3c0c0}
+  .danger{color:#c62828}
+  #banner{background:#fff3cd;border:1px solid #ffe69c;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px;display:none}
+  kbd{background:#eee;border:1px solid #ccc;border-radius:4px;padding:0 5px;font-size:11px}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1>🏷️ ASTE Annotation</h1>
+  <input type="file" id="fileInput" accept=".txt" style="display:none">
+  <button onclick="fileInput.click()">📂 Import .txt</button>
+  <button onclick="exportTxt()">💾 Export .txt</button>
+  <span style="flex:1"></span>
+  <span id="saveStatus" class="hint"></span>
+  <span id="progress" class="hint"></span>
+</div>
+
+<div id="layout">
+  <div id="sidebar">
+    <div class="shead">Danh sách câu</div>
+    <div id="sentList"></div>
+  </div>
+
+  <div id="main">
+    <div id="banner"></div>
+    <div id="remind" style="background:#fdecea;border:1px solid #f5c6cb;padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px;display:none"></div>
+
+    <div class="panel" id="emptyState">
+      <b>Bắt đầu:</b> bấm <b>📂 Import .txt</b> để nạp file gồm các dòng dạng
+      <code>câu ...#### #### ####[([2], [3, 4], 'NEG')]</code>.
+      <div class="hint">Mỗi triplet = <code>([chỉ_số_target], [chỉ_số_opinion], 'SENTIMENT')</code>, chỉ số tính theo vị trí token (tách theo dấu cách). Target trước, opinion sau.</div>
+    </div>
+
+    <div id="editor" style="display:none">
+      <div class="panel">
+        <div class="row" style="justify-content:space-between">
+          <div class="row">
+            <button onclick="go(-1)">◀ Trước</button>
+            <span id="posLabel" style="font-weight:600"></span>
+            <button onclick="go(1)">Sau ▶</button>
+            <button class="primary" onclick="confirmNext()">✔ Xác nhận &amp; câu tiếp</button>
+            <span id="statusLabel" class="hint"></span>
+          </div>
+          <div class="legend">
+            <span><i class="sw" style="background:var(--tgt-bg);border:1px solid var(--tgt)"></i>Target</span>
+            <span><i class="sw" style="background:var(--opi-bg);border:1px solid var(--opi)"></i>Opinion</span>
+            <span><i class="sw" style="background:var(--pos)"></i>POS</span>
+            <span><i class="sw" style="background:var(--neg)"></i>NEG</span>
+            <span><i class="sw" style="background:var(--neu)"></i>NEU</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="hint" style="margin-bottom:8px" id="modeHint">
+          <b>Bôi đen</b> cụm chưa gán → chọn Target/Opinion. &nbsp;·&nbsp; <b>Giữ &amp; kéo</b> từ cụm đã gán → nối mũi tên (Target↔Opinion).
+        </div>
+        <div id="canvasWrap">
+          <div id="canvas">
+            <svg id="arcs"></svg>
+            <div id="tokenRow"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <b>Span</b> <span class="hint">(đổi loại / sửa vùng / xóa)</span>
+        <div id="spanList"></div>
+      </div>
+
+      <div class="panel">
+        <b>Mũi tên (quan hệ)</b> <span class="hint">Target → Opinion, kèm sentiment</span>
+        <div id="relList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="shead">Chi tiết đối tượng</div>
+    <div id="inspector"></div>
+  </div>
+</div>
+
+<div id="popup"></div>
+
+<script>
+"use strict";
+const SENTIMENTS = ["POS","NEG","NEU"];
+const SEP = "#### #### ####";
+const LS_KEY = "aste_label_state_v1";
+const AUTO_EXPORT_EVERY = 20;   // nhắc export sau mỗi N câu xác nhận
+
+let state = { filename:"", sentences:[], current:0, dirty:false, confirmsSinceExport:0 };
+let sel = null;            // {start,end} pending token selection
+let selectedRelId = null;
+let selectedSpanId = null;
+let tokenEls = [];
+let arcBaseY = 0;          // y mép trên hàng token (cao độ neo cung), cập nhật trong layoutArcs
+
+/* ---------------- parsing / serialization ---------------- */
+function parseLine(line){
+  line = line.replace(/\r$/,"");
+  let status = "";
+  const tab = line.indexOf("\t");
+  if(tab >= 0){ status = line.slice(tab+1).trim(); line = line.slice(0,tab); }
+  const i = line.indexOf(SEP);
+  let sentenceStr, tripStr;
+  if(i >= 0){ sentenceStr = line.slice(0,i); tripStr = line.slice(i+SEP.length); }
+  else { sentenceStr = line; tripStr = "[]"; }
+  const tokens = sentenceStr.length ? sentenceStr.split(" ") : [];
+  const sent = { tokens, spans:[], rels:[], status, nextId:1 };
+  const spanKey = new Map();
+  function getSpan(role, idxStr){
+    const arr = idxStr.split(",").map(s=>s.trim()).filter(s=>s.length).map(Number);
+    if(!arr.length) return null;
+    const start = Math.min(...arr), end = Math.max(...arr);
+    const key = role+":"+start+":"+end;
+    if(!spanKey.has(key)){ const id = sent.nextId++; sent.spans.push({id,role,start,end}); spanKey.set(key,id); }
+    return spanKey.get(key);
+  }
+  const re = /\(\s*\[([\d,\s]*)\]\s*,\s*\[([\d,\s]*)\]\s*,\s*'([^']*)'\s*\)/g;
+  let m;
+  while((m = re.exec(tripStr))){
+    const t = getSpan("TARGET", m[1]);
+    const o = getSpan("OPINION", m[2]);
+    if(t!=null && o!=null) sent.rels.push({id: sent.nextId++, tgt:t, opi:o, sent:m[3]});
+  }
+  return sent;
+}
+
+function rangeList(s){ const a=[]; for(let i=s.start;i<=s.end;i++)a.push(i); return "["+a.join(", ")+"]"; }
+function spanById(sent,id){ return sent.spans.find(s=>s.id===id); }
+function spanText(sent,s){ return s? sent.tokens.slice(s.start,s.end+1).join(" ") : "?"; }
+
+function serializeSent(sent, withStatus){
+  const trips = sent.rels.map(r=>{
+    const t = spanById(sent,r.tgt), o = spanById(sent,r.opi);
+    return "("+rangeList(t)+", "+rangeList(o)+", '"+r.sent+"')";
+  });
+  let line = sent.tokens.join(" ") + SEP + "[" + trips.join(", ") + "]";
+  if(withStatus) line += "\t" + (sent.status||"");
+  return line;
+}
+
+/* ---------------- import / export ---------------- */
+document.getElementById("fileInput").addEventListener("change", e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    const lines = r.result.split("\n").filter(l=>l.trim().length);
+    const sents = lines.map(parseLine);
+    // nhảy tới câu đầu tiên chưa "confirmed" (vd làm được 800/1000 -> mở câu 801)
+    const firstTodo = sents.findIndex(s=>s.status!=="confirmed");
+    state = { filename:f.name, sentences:sents, current: firstTodo<0 ? Math.max(0,sents.length-1) : firstTodo, dirty:false, confirmsSinceExport:0 };
+    document.getElementById("banner").style.display="none";  // import -> ẩn banner khôi phục
+    selectedRelId=null; selectedSpanId=null; clearSel(); render(); save();
+  };
+  r.readAsText(f);
+});
+
+function exportTxt(){
+  if(!state.sentences.length){ alert("Chưa có dữ liệu."); return; }
+  const out = state.sentences.map(s=>serializeSent(s,true)).join("\n")+"\n";  // luôn kèm cột trạng thái
+  const blob = new Blob([out], {type:"text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (state.filename||"annotations").replace(/\.txt$/,"") + "_labeled.txt";
+  a.click(); URL.revokeObjectURL(a.href);
+  state.dirty = false; state.confirmsSinceExport = 0; render(); clearSaved();  // export xong: xoá nháp, phiên sau bắt đầu sạch
+}
+
+/* ---------------- mutation helpers ---------------- */
+function curSent(){ return state.sentences[state.current]; }
+function mutate(fn){ const s=curSent(); fn(s); if(s.status!=="confirmed") s.status="edited"; state.dirty=true; render(); save(); }
+
+function addSpanFromSel(role){
+  if(!sel){ alert("Hãy chọn token trước (bấm token đầu rồi token cuối)."); return; }
+  mutate(s=>{
+    const key = role+":"+sel.start+":"+sel.end;
+    const exists = s.spans.some(sp=>sp.role+":"+sp.start+":"+sp.end===key);
+    if(!exists) s.spans.push({id:s.nextId++, role, start:sel.start, end:sel.end});
+  });
+  clearSel();
+}
+function commitSpan(role){ addSpanFromSel(role); }
+
+// Đổi loại 1 cụm => các mũi tên dính cụm này không còn đúng hướng Target→Opinion -> xóa luôn.
+function changeSpanRole(id, role){ mutate(s=>{ const sp=spanById(s,id); if(sp && sp.role!==role){ sp.role=role; s.rels=s.rels.filter(r=>r.tgt!==id && r.opi!==id); } }); }
+// Xóa 1 cụm => xóa trọn triplet: cụm này + các cụm nối ở đầu kia + mọi mũi tên liên quan.
+function spanCascade(s, id){
+  const partners=new Set();
+  s.rels.forEach(r=>{ if(r.tgt===id) partners.add(r.opi); else if(r.opi===id) partners.add(r.tgt); });
+  const spanIds=new Set([id, ...partners]);
+  const relIds=new Set(s.rels.filter(r=>spanIds.has(r.tgt)||spanIds.has(r.opi)).map(r=>r.id));
+  return {spanIds, relIds};
+}
+function deleteSpan(id){
+  mutate(s=>{
+    const {spanIds, relIds}=spanCascade(s,id);
+    s.spans = s.spans.filter(sp=>!spanIds.has(sp.id));
+    s.rels  = s.rels.filter(r=>!relIds.has(r.id));
+  });
+}
+function addRel(tgtId, opiId, sentiment){ mutate(s=>{ s.rels.push({id:s.nextId++, tgt:tgtId, opi:opiId, sent:sentiment}); }); }
+function changeRelSent(id, v){ mutate(s=>{ const r=s.rels.find(x=>x.id===id); if(r) r.sent=v; }); }
+function deleteRel(id){ if(selectedRelId===id) selectedRelId=null; mutate(s=>{ s.rels = s.rels.filter(r=>r.id!==id); }); }
+
+/* ---------------- navigation ---------------- */
+function go(d){ const n=state.current+d; if(n>=0 && n<state.sentences.length){ state.current=n; selectedRelId=null; selectedSpanId=null; clearSel(); render(); save(); } }
+function jump(i){ state.current=i; selectedRelId=null; selectedSpanId=null; clearSel(); render(); save(); }
+function confirmNext(){
+  const s=curSent(); s.status="confirmed";
+  state.dirty=true; state.confirmsSinceExport=(state.confirmsSinceExport||0)+1;
+  if(state.current<state.sentences.length-1) state.current++;
+  selectedRelId=null; selectedSpanId=null; clearSel(); render(); save();
+}
+
+/* ---------------- selection ---------------- */
+function clearSel(){ sel=null; renderTokens(); }
+function spanAt(s, i){ return s.spans.find(sp=>i>=sp.start && i<=sp.end); }
+function highlightSel(){ tokenEls.forEach((el,i)=>{ if(el) el.classList.toggle("selrange", !!(sel && i>=sel.start && i<=sel.end)); }); }
+function tokenIndexAt(x,y){ const el=document.elementFromPoint(x,y); const tk=el&&el.closest&&el.closest(".tok"); return tk?+tk.dataset.i:null; }
+function showRolePopup(x,y,cb){
+  const p=document.getElementById("popup"); p.innerHTML="";
+  const t=document.createElement("div"); t.className="hint"; t.textContent="Gán cụm đã chọn là:"; p.appendChild(t);
+  const bt=document.createElement("button"); bt.textContent="Target"; bt.style.cssText="border-color:var(--tgt);color:var(--tgt)"; bt.onclick=()=>{p.style.display="none";cb("TARGET");};
+  const bo=document.createElement("button"); bo.textContent="Opinion"; bo.style.cssText="border-color:var(--opi);color:var(--opi)"; bo.onclick=()=>{p.style.display="none";cb("OPINION");};
+  const bc=document.createElement("button"); bc.textContent="Hủy"; bc.onclick=()=>{p.style.display="none";clearSel();};
+  p.append(bt,bo,bc);
+  p.style.left=Math.min(x,innerWidth-200)+"px"; p.style.top=(y+8)+"px"; p.style.display="block";
+}
+
+/* ---------------- rendering ---------------- */
+function tokenRoleClass(s, i){
+  const isT = s.spans.some(sp=>sp.role==="TARGET"  && i>=sp.start && i<=sp.end);
+  const isO = s.spans.some(sp=>sp.role==="OPINION" && i>=sp.start && i<=sp.end);
+  if(isT&&isO) return "both"; if(isT) return "tgt"; if(isO) return "opi"; return "";
+}
+// role của span phủ cả token i và i+1 (để tô liền khoảng trắng giữa chúng), hoặc null
+function connectRole(s, i){
+  if(s.spans.some(sp=>sp.role==="TARGET"  && sp.start<=i && sp.end>=i+1)) return "t";
+  if(s.spans.some(sp=>sp.role==="OPINION" && sp.start<=i && sp.end>=i+1)) return "o";
+  return null;
+}
+function renderTokens(){
+  const s = curSent(); const row = document.getElementById("tokenRow");
+  row.innerHTML=""; tokenEls=[];
+  const conn = s.tokens.map((_,i)=> i<s.tokens.length-1 ? connectRole(s,i) : null);
+  s.tokens.forEach((tk,i)=>{
+    const el=document.createElement("span");
+    el.className="tok idx "+tokenRoleClass(s,i);
+    if(conn[i]) el.classList.add("cr-"+conn[i]);       // nối sang token bên phải
+    if(i>0 && conn[i-1]) el.classList.add("cl-"+conn[i-1]); // nối với token bên trái
+    if(sel && i>=sel.start && i<=sel.end) el.classList.add("selrange");
+    if(selectedSpanId!=null){ const sp=spanById(s,selectedSpanId); if(sp && i>=sp.start && i<=sp.end) el.classList.add("inspsel"); }
+    el.innerHTML='<span class="num">'+i+'</span>'+escapeHtml(tk);
+    el.dataset.i=i;
+    row.appendChild(el); tokenEls[i]=el;
+  });
+  requestAnimationFrame(layoutArcs);
+}
+function escapeHtml(x){ return x.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function spanCenterX(s){ const a=tokenEls[s.start], b=tokenEls[s.end]; if(!a||!b) return 0; const ox=document.getElementById("tokenRow").offsetLeft; return ox + (a.offsetLeft + b.offsetLeft + b.offsetWidth)/2; }
+function tokenTopY(){ return arcBaseY; }
+
+function layoutArcs(){
+  const s = curSent(); const svg = document.getElementById("arcs"); const wrap=document.getElementById("canvas");
+  // assign stacking tiers by overlapping x-intervals
+  const rels = s.rels.map(r=>{
+    const t=spanById(s,r.tgt), o=spanById(s,r.opi);
+    const tx=spanCenterX(t), ox=spanCenterX(o);
+    return {r, tx, ox, left:Math.min(tx,ox), right:Math.max(tx,ox)};
+  }).sort((a,b)=> (a.right-a.left)-(b.right-b.left));
+  const tierEnds=[];
+  rels.forEach(R=>{
+    let tier=0; while(tier<tierEnds.length && tierEnds[tier] > R.left+2) tier++;
+    tierEnds[tier]=R.right; R.tier=tier;
+  });
+  const maxTier = Math.max(0, tierEnds.length-1);
+  const H = t => 40 + t*30;                  // chiều dài "tay cầm" thẳng đứng theo tầng
+  const peak = t => 0.75*H(t);               // đỉnh cung thực tế (cubic)
+  // luôn chừa tối thiểu 60px phía trên để có chỗ vẽ/preview mũi tên (kể cả câu chưa gán gì)
+  const arcArea = Math.max(60, rels.length ? Math.round(peak(maxTier)) + 22 : 0);
+  arcBaseY = arcArea;
+  // padding-top (KHÔNG dùng margin-top: bị margin-collapsing đẩy token ra ngoài canvas)
+  document.getElementById("tokenRow").style.paddingTop = arcArea+"px";
+  const baseY = arcArea;                     // = mép trên của hàng token
+  const topY = baseY - 4;                    // neo cung hơi cao hơn token để mũi tên không chạm chữ
+  // SVG chỉ cao bằng vùng cung (phía trên token) để không che token -> cung/nhãn bấm được,
+  // token bên dưới vẫn click bình thường. (overflow:visible nên arrowhead/preview vẫn vẽ tràn xuống)
+  svg.style.width = wrap.scrollWidth+"px";
+  svg.style.height = arcArea+"px";
+  svg.setAttribute("width", wrap.scrollWidth);
+  svg.setAttribute("height", arcArea);
+
+  let defs = '<defs>';
+  for(const k of ["POS","NEG","NEU"]) defs += marker(k);
+  defs += '</defs>';
+  let body="";
+  rels.forEach(R=>{
+    const h = H(R.tier);
+    const col = sentColorVar(R.r.sent);
+    const wsel = (R.r.id===selectedRelId);
+    const mk = (R.r.sent==="POS"||R.r.sent==="NEG"||R.r.sent==="NEU") ? R.r.sent : "NEU";
+    // cubic với tay cầm thẳng đứng: rời/đến token theo phương dọc -> mũi tên chĩa thẳng xuống
+    const d=`M ${R.tx} ${topY} C ${R.tx} ${topY-h} ${R.ox} ${topY-h} ${R.ox} ${topY}`;
+    // đường "hit" trong suốt dày để dễ bấm trúng cung
+    body += `<path d="${d}" fill="none" stroke="transparent" stroke-width="16" data-rel="${R.r.id}" style="pointer-events:stroke;cursor:pointer"></path>`;
+    body += `<path d="${d}" fill="none" stroke="${col}" stroke-width="${wsel?3.5:2}" marker-end="url(#ah_${mk})"
+      style="pointer-events:none" data-rel="${R.r.id}"></path>`;
+    const lx=(R.tx+R.ox)/2, ly=topY - peak(R.tier);
+    body += `<rect x="${lx-16}" y="${ly-9}" width="32" height="16" rx="4" fill="#fff" stroke="${col}" data-rel="${R.r.id}" style="cursor:pointer;pointer-events:all"></rect>`;
+    body += `<text x="${lx}" y="${ly+3}" text-anchor="middle" font-size="10" fill="${col}" style="pointer-events:none">${R.r.sent}</text>`;
+  });
+  svg.innerHTML = defs + body;
+  svg.querySelectorAll("[data-rel]").forEach(el=>el.addEventListener("click",()=>{ selectedRelId=+el.dataset.rel; selectedSpanId=null; render(); }));
+}
+function sentColorVar(s){ return s==="POS"?getCss("--pos"):s==="NEG"?getCss("--neg"):getCss("--neu"); }
+function getCss(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#616161"; }
+function marker(k){ const col=sentColorVar(k); return `<marker id="ah_${k}" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="${col}"/></marker>`; }
+
+function renderLists(){
+  const s = curSent();
+  const sl = document.getElementById("spanList"); sl.innerHTML="";
+  s.spans.forEach(sp=>{
+    const row=document.createElement("div"); row.className="listrow"+(sp.id===selectedSpanId?" sel":""); row.style.cursor="pointer";
+    row.innerHTML = `<span class="chip ${sp.role==='TARGET'?'tgt':'opi'}">${sp.role}</span>
+      <b>${escapeHtml(spanText(s,sp))}</b> <span class="hint">(${sp.start}..${sp.end})</span>`;
+    row.onclick=()=>{ selectedSpanId=sp.id; selectedRelId=null; render(); };
+    sl.appendChild(row);
+  });
+  if(!s.spans.length) sl.innerHTML='<div class="hint">Chưa có span. Bôi đen token để tạo.</div>';
+
+  const rl = document.getElementById("relList"); rl.innerHTML="";
+  s.rels.forEach(r=>{
+    const t=spanById(s,r.tgt), o=spanById(s,r.opi);
+    const row=document.createElement("div"); row.className="listrow"+(r.id===selectedRelId?" sel":""); row.style.cursor="pointer";
+    row.innerHTML = `<span class="chip tgt">${escapeHtml(spanText(s,t))}</span> →
+      <span class="chip opi">${escapeHtml(spanText(s,o))}</span>
+      <span class="${r.sent==='POS'?'pos':r.sent==='NEG'?'neg':'neu'}">${r.sent}</span>`;
+    row.onclick=()=>{ selectedRelId=r.id; selectedSpanId=null; render(); };
+    rl.appendChild(row);
+  });
+  if(!s.rels.length) rl.innerHTML='<div class="hint">Chưa có mũi tên. Dùng chế độ "↗️ Kéo mũi tên": kéo từ 1 span Target sang 1 span Opinion.</div>';
+}
+
+function renderSidebar(){
+  const el=document.getElementById("sentList"); el.innerHTML="";
+  let activeEl=null;
+  state.sentences.forEach((s,i)=>{
+    const d=document.createElement("div"); d.className="sitem"+(i===state.current?" active":"");
+    d.innerHTML=`<span class="dot ${s.status}"></span><span class="hint">${i}</span><span class="txt">${escapeHtml(s.tokens.join(" "))}</span>`;
+    d.onclick=()=>jump(i); el.appendChild(d);
+    if(i===state.current) activeEl=d;
+  });
+  // cuộn để câu đang chọn luôn nằm trong tầm nhìn (hoãn tới sau layout để đúng cả lúc mới mở)
+  if(activeEl) requestAnimationFrame(()=> activeEl.scrollIntoView({block:"nearest"}));
+}
+
+function render(){
+  const has = state.sentences.length>0;
+  document.getElementById("emptyState").style.display = has?"none":"block";
+  document.getElementById("editor").style.display = has?"block":"none";
+  if(!has){ document.getElementById("progress").textContent=""; return; }
+  const edited=state.sentences.filter(s=>s.status==="edited").length;
+  const conf=state.sentences.filter(s=>s.status==="confirmed").length;
+  document.getElementById("progress").textContent =
+    `${state.filename} — Câu ${state.current+1}/${state.sentences.length} · ✏️ sửa ${edited} · ✔ xác nhận ${conf}`;
+  // save-status + reminder
+  document.getElementById("saveStatus").innerHTML = state.dirty
+    ? '<span style="color:#c62828;font-weight:600">⚠ chưa export</span>'
+    : '<span style="color:#2e7d32">✓ đã export</span>';
+  const rm=document.getElementById("remind");
+  if((state.confirmsSinceExport||0) >= AUTO_EXPORT_EVERY){
+    rm.style.display="block";
+    rm.innerHTML = `⚠ Đã xác nhận <b>${state.confirmsSinceExport}</b> câu kể từ lần export gần nhất — hãy export để khỏi mất việc. `;
+    const ex=document.createElement("button"); ex.className="primary"; ex.textContent="💾 Export ngay"; ex.onclick=exportTxt;
+    const lt=document.createElement("button"); lt.style.marginLeft="6px"; lt.textContent="Để sau"; lt.onclick=()=>{ state.confirmsSinceExport=0; render(); save(); };
+    rm.append(ex,lt);
+  } else rm.style.display="none";
+  document.getElementById("posLabel").textContent = `Câu ${state.current+1}/${state.sentences.length}`;
+  const st=curSent().status;
+  document.getElementById("statusLabel").innerHTML = st==="confirmed"?'<span class="pos">✔ đã xác nhận</span>':st==="edited"?'<span style="color:#f9a825">✏️ đã sửa</span>':'<span class="hint">chưa làm</span>';
+  document.getElementById("modeHint").innerHTML =
+    '<b>Bôi đen</b> cụm chưa gán → chọn Target/Opinion. &nbsp;·&nbsp; <b>Giữ &amp; kéo từ Target → Opinion</b> để nối mũi tên. &nbsp;·&nbsp; <b>Bấm</b> cụm/mũi tên → sửa/xóa ở cột phải.';
+  renderSidebar(); renderTokens(); renderLists(); renderInspector();
+}
+
+function inspectEmpty(){ return '<div class="hint">Bấm (không giữ) vào 1 cụm Target/Opinion hoặc 1 mũi tên trên câu để xem &amp; sửa/xóa ở đây.</div>'; }
+function renderInspector(){
+  const box=document.getElementById("inspector"); if(!box) return;
+  const s=curSent(); box.innerHTML="";
+  if(selectedSpanId!=null){
+    const sp=spanById(s,selectedSpanId);
+    if(!sp){ selectedSpanId=null; box.innerHTML=inspectEmpty(); return; }
+    const cas=spanCascade(s,sp.id);
+    const nRel=cas.relIds.size, nPartner=cas.spanIds.size-1;
+    const wrap=document.createElement("div");
+    wrap.innerHTML = `<div class="big"><span class="chip ${sp.role==='TARGET'?'tgt':'opi'}">${sp.role}</span> ${escapeHtml(spanText(s,sp))}</div>
+      <div class="hint">token ${sp.start}..${sp.end} · ${nRel} mũi tên liên quan</div>`;
+    box.appendChild(wrap);
+    box.insertAdjacentHTML("beforeend",'<div class="ttl">Đổi loại</div>');
+    const rsel=document.createElement("select");
+    ["TARGET","OPINION"].forEach(r=>{const o=document.createElement("option");o.value=r;o.text=r;if(r===sp.role)o.selected=true;rsel.appendChild(o);});
+    box.appendChild(rsel);
+    if(nRel>0) box.insertAdjacentHTML("beforeend",`<div class="hint danger">⚠ Đổi loại sẽ xóa ${nRel} mũi tên của cụm này khi Lưu.</div>`);
+    box.insertAdjacentHTML("beforeend",'<div class="ttl">&nbsp;</div>');
+    const sv=document.createElement("button"); sv.className="primary"; sv.textContent="💾 Lưu thay đổi";
+    sv.onclick=()=>{ if(rsel.value!==sp.role) changeSpanRole(sp.id, rsel.value); };
+    box.appendChild(sv);
+    box.insertAdjacentHTML("beforeend",'<div class="ttl">Xóa</div>');
+    const db=document.createElement("button"); db.className="x"; db.style.marginLeft="6px";
+    db.textContent = `🗑 Xóa cụm${nPartner?` + ${nPartner} cụm nối`:""}${nRel?` + ${nRel} mũi tên`:""}`;
+    db.onclick=()=>{ deleteSpan(sp.id); selectedSpanId=null; render(); }; box.appendChild(db);
+  } else if(selectedRelId!=null){
+    const r=s.rels.find(x=>x.id===selectedRelId);
+    if(!r){ selectedRelId=null; box.innerHTML=inspectEmpty(); return; }
+    const t=spanById(s,r.tgt), o=spanById(s,r.opi);
+    box.insertAdjacentHTML("beforeend",
+      `<div class="big">Mũi tên</div><div><span class="chip tgt">${escapeHtml(spanText(s,t))}</span> → <span class="chip opi">${escapeHtml(spanText(s,o))}</span></div>`);
+    box.insertAdjacentHTML("beforeend",'<div class="ttl">Sentiment</div>');
+    const ss=document.createElement("select"); ss.className=r.sent==="POS"?"pos":r.sent==="NEG"?"neg":"neu";
+    SENTIMENTS.concat(SENTIMENTS.includes(r.sent)?[]:[r.sent]).forEach(v=>{const o2=document.createElement("option");o2.value=v;o2.text=v;if(v===r.sent)o2.selected=true;ss.appendChild(o2);});
+    box.appendChild(ss);
+    box.insertAdjacentHTML("beforeend",'<div class="ttl">&nbsp;</div>');
+    const sv=document.createElement("button"); sv.className="primary"; sv.textContent="💾 Lưu thay đổi";
+    sv.onclick=()=>{ if(ss.value!==r.sent) changeRelSent(r.id, ss.value); };
+    box.appendChild(sv);
+    box.insertAdjacentHTML("beforeend",'<div class="ttl">Xóa</div>');
+    const db=document.createElement("button"); db.className="x"; db.textContent="🗑 Xóa mũi tên";
+    db.onclick=()=>{ deleteRel(r.id); render(); }; box.appendChild(db);
+  } else {
+    box.innerHTML=inspectEmpty();
+  }
+}
+
+/* ---------------- drag to connect (arrow mode) ---------------- */
+let drag=null;          // đang kéo tạo mũi tên
+let selecting=false;    // đang bôi đen chọn vùng
+let downXY=null, moved=false;   // phân biệt click vs kéo
+const canvas=document.getElementById("canvas");
+
+function svgPoint(e){ const r=canvas.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+// đường cong vòng lên trên rồi xuống điểm đích (qua đầu chữ)
+function arcPath(x0,y0,x1,y1){ const h=Math.max(36, arcBaseY-8); return `M ${x0} ${y0} C ${x0} ${y0-h} ${x1} ${y1-h} ${x1} ${y1}`; }
+
+canvas.addEventListener("pointerdown", e=>{
+  const tk=e.target.closest(".tok");
+  if(!tk){ // bấm vùng trống (không phải mũi tên) -> bỏ chọn inspector
+    if(!e.target.closest("[data-rel]") && (selectedSpanId!=null||selectedRelId!=null)){ selectedSpanId=null; selectedRelId=null; render(); }
+    return;
+  }
+  const i=+tk.dataset.i; const s=curSent();
+  downXY={x:e.clientX,y:e.clientY}; moved=false;
+  // token đã thuộc 1 span (và không đang sửa vùng) -> kéo tạo mũi tên / click để xem; ngược lại -> bôi đen chọn span
+  const sp = spanAt(s,i);
+  if(sp){
+    e.preventDefault();
+    // chỉ Target mới kéo ra mũi tên; Opinion thì chỉ click để xem (canArrow=false)
+    drag={spanId:sp.id, role:sp.role, x0:spanCenterX(sp), y0:tokenTopY(), canArrow: sp.role==="TARGET"};
+    if(drag.canArrow){
+      const path=document.createElementNS("http://www.w3.org/2000/svg","path");
+      path.setAttribute("id","tmpArc"); path.setAttribute("fill","none"); path.setAttribute("stroke","#1565c0");
+      path.setAttribute("stroke-width","2"); path.setAttribute("stroke-dasharray","5 4");
+      path.setAttribute("d", arcPath(drag.x0,drag.y0,drag.x0,drag.y0));
+      document.getElementById("arcs").appendChild(path);
+    }
+    canvas.setPointerCapture(e.pointerId);
+  } else {
+    e.preventDefault();
+    sel={start:i,end:i,anchor:i}; selecting=true; highlightSel();
+    canvas.setPointerCapture(e.pointerId);
+  }
+});
+canvas.addEventListener("pointermove", e=>{
+  if(downXY && (Math.abs(e.clientX-downXY.x)+Math.abs(e.clientY-downXY.y))>4) moved=true;
+  if(selecting){
+    const j=tokenIndexAt(e.clientX,e.clientY);
+    if(j!=null){ sel.start=Math.min(sel.anchor,j); sel.end=Math.max(sel.anchor,j); highlightSel(); }
+  } else if(drag){
+    const p=svgPoint(e); const path=document.getElementById("tmpArc");
+    if(path) path.setAttribute("d", arcPath(drag.x0,drag.y0,p.x,p.y));
+  }
+});
+canvas.addEventListener("pointerup", e=>{
+  try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+  if(selecting){
+    selecting=false;
+    if(sel) showRolePopup(e.clientX, e.clientY, role=>commitSpan(role));
+    return;
+  }
+  if(drag){
+    const path=document.getElementById("tmpArc"); if(path) path.remove();
+    const dragData=drag; drag=null;
+    if(!moved){ // click (không kéo) lên cụm đã gán -> mở inspector
+      selectedSpanId=dragData.spanId; selectedRelId=null; render(); return;
+    }
+    if(!dragData.canArrow) return;          // kéo từ Opinion: không tạo mũi tên
+    const j=tokenIndexAt(e.clientX,e.clientY);
+    if(j==null) return;
+    const s=curSent();
+    const dst=spanAt(s,j);
+    if(!dst || dst.id===dragData.spanId) return;
+    if(dst.role!=="OPINION"){ alert("Mũi tên phải kéo từ Target → Opinion."); return; }
+    showSentimentPopup(e.clientX, e.clientY, (sentiment)=>addRel(dragData.spanId, dst.id, sentiment));
+  }
+});
+
+function showSentimentPopup(x,y,cb){
+  const p=document.getElementById("popup"); p.innerHTML="";
+  const title=document.createElement("div"); title.className="hint"; title.textContent="Chọn sentiment:"; p.appendChild(title);
+  SENTIMENTS.forEach(s=>{
+    const b=document.createElement("button");
+    b.textContent=s; b.className = s==="POS"?"pos":s==="NEG"?"neg":"neu";
+    b.onclick=()=>{ p.style.display="none"; cb(s); };
+    p.appendChild(b);
+  });
+  const c=document.createElement("button"); c.textContent="✕"; c.onclick=()=>p.style.display="none"; p.appendChild(c);
+  p.style.left=Math.min(x, innerWidth-180)+"px"; p.style.top=(y+8)+"px"; p.style.display="block";
+}
+document.addEventListener("pointerdown", e=>{ const p=document.getElementById("popup"); if(p.style.display==="block" && !p.contains(e.target)) p.style.display="none"; }, true);
+
+/* ---------------- keyboard ---------------- */
+document.addEventListener("keydown", e=>{
+  if(!state.sentences.length) return;
+  if(e.target.tagName==="SELECT"||e.target.tagName==="INPUT") return;
+  if(e.key==="ArrowRight") go(1);
+  else if(e.key==="ArrowLeft") go(-1);
+  else if(e.key==="Enter") confirmNext();
+});
+
+/* ---------------- persistence ---------------- */
+let saveTimer=null;
+function save(){ clearTimeout(saveTimer); saveTimer=setTimeout(()=>{ try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }catch(_){} }, 300); }
+function clearSaved(){ clearTimeout(saveTimer); try{ localStorage.removeItem(LS_KEY); }catch(_){} }
+function tryRestore(){
+  let raw; try{ raw=localStorage.getItem(LS_KEY); }catch(_){ return; }
+  if(!raw) return;
+  let prev; try{ prev=JSON.parse(raw); }catch(_){ return; }
+  if(!prev || !prev.sentences || !prev.sentences.length) return;
+  const b=document.getElementById("banner");
+  b.style.display="block";
+  b.innerHTML=`Có phiên làm việc trước: <b>${escapeHtml(prev.filename||"(không tên)")}</b> — ${prev.sentences.length} câu. `;
+  const r=document.createElement("button"); r.textContent="Khôi phục"; r.className="primary"; r.style.marginLeft="8px";
+  r.onclick=()=>{ state=prev; b.style.display="none"; render(); };
+  const d=document.createElement("button"); d.textContent="Bỏ"; d.style.marginLeft="6px";
+  d.onclick=()=>{ b.style.display="none"; };
+  b.append(r,d);
+}
+
+// chặn đóng/tải lại tab khi còn thay đổi chưa export
+window.addEventListener("beforeunload", e=>{
+  if(state.dirty){ e.preventDefault(); e.returnValue=""; return ""; }
+});
+
+tryRestore();
+render();
+</script>
+</body>
+</html>

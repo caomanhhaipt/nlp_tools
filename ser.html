@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SER Annotation Tool</title>
+<style>
+  :root{
+    --pos:#2e7d32; --pos-bg:#c8e6c9;
+    --neg:#c62828; --neg-bg:#ffcdd2;
+    --neu:#1976d2; --neu-bg:#bbdefb;
+    --border:#d0d4da; --muted:#666;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;background:#f5f6f8;font-size:15px}
+  button{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 12px;font-size:15px}
+  button:hover{background:#f0f2f5}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:#1565c0;color:#fff;border-color:#1565c0}
+  button.primary:hover{background:#0d47a1}
+  #topbar{display:flex;gap:12px;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  #topbar h1{font-size:19px;margin:0 8px 0 0}
+  #topbar .spacer{flex:1}
+  #counter{font-size:14px;color:var(--muted)}
+  #counter b{color:#1a1a1a}
+  #layout{display:grid;grid-template-columns:280px 1fr;height:calc(100vh - 53px)}
+  #sidebar{border-right:1px solid var(--border);background:#fff;overflow-y:auto}
+  .shead{padding:9px 12px;font-size:13px;color:var(--muted);position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+  .shead .spacer{flex:1}
+  .sitem{padding:9px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px;display:flex;gap:8px;align-items:center}
+  .sitem:hover{background:#f5f8ff}
+  .sitem.active{background:#e3f2fd;font-weight:600}
+  .sitem.missing{opacity:.5}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#cfd4da}
+  .dot.edited{background:#f9a825} .dot.confirmed{background:#2e7d32}
+  .sitem .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .sitem .tag{font-size:11px;padding:1px 6px;border-radius:4px;color:#fff}
+  .tag.pos{background:var(--pos)} .tag.neg{background:var(--neg)} .tag.neu{background:var(--neu)}
+  #main{padding:18px;overflow-y:auto}
+  .panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+  .fname{font-size:18px;font-weight:600;margin-bottom:2px;word-break:break-all}
+  .hint{font-size:13px;color:var(--muted);margin:4px 0}
+  #wfWrap{position:relative;margin:12px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:#fafbfc}
+  #wf{display:block;width:100%;height:140px;cursor:pointer}
+  #cursor{position:absolute;top:0;bottom:0;width:2px;background:#1565c0;left:0;pointer-events:none;display:none}
+  .controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  #playBtn{width:46px;height:46px;border-radius:50%;font-size:18px;display:flex;align-items:center;justify-content:center;padding:0}
+  #replayBtn{width:40px;height:40px;border-radius:50%;font-size:16px;display:flex;align-items:center;justify-content:center;padding:0}
+  #time{font-variant-numeric:tabular-nums;font-size:15px;color:var(--muted);min-width:104px}
+  .speed{display:flex;gap:8px;align-items:center;font-size:14px}
+  .speed input{width:150px}
+  .speed b{min-width:38px;display:inline-block;text-align:right;font-variant-numeric:tabular-nums}
+  .labels{display:flex;gap:10px;margin-top:16px}
+  .labels button{flex:1;padding:15px;font-size:17px;font-weight:600;border-width:2px}
+  .lbl-neg{color:var(--neg)} .lbl-neg.sel{background:var(--neg-bg);border-color:var(--neg)}
+  .lbl-neu{color:var(--neu)} .lbl-neu.sel{background:var(--neu-bg);border-color:var(--neu)}
+  .lbl-pos{color:var(--pos)} .lbl-pos.sel{background:var(--pos-bg);border-color:var(--pos)}
+  .nav{display:flex;gap:10px;align-items:center;margin-top:16px}
+  .nav .spacer{flex:1}
+  #statusLabel .ok{color:var(--pos);font-weight:600}
+  #statusLabel .edit{color:#f9a825;font-weight:600}
+  .empty{padding:48px;text-align:center;color:var(--muted)}
+  kbd{background:#eef0f3;border:1px solid #d0d4da;border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:ui-monospace,monospace;color:#333}
+  /* toast + modal */
+  #toasts{position:fixed;top:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:60}
+  .toast{background:#fff;border-left:4px solid #1565c0;border-radius:8px;padding:12px 16px 12px 14px;font-size:14px;box-shadow:0 6px 22px rgba(0,0,0,.16);min-width:250px;max-width:360px;display:flex;gap:10px;align-items:flex-start;transition:opacity .3s}
+  .toast .ic{font-size:15px;line-height:1.3}
+  .toast.success{border-color:var(--pos)} .toast.error{border-color:var(--neg)} .toast.info{border-color:#1565c0}
+  @keyframes slidein{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,24,33,.45);display:flex;align-items:center;justify-content:center;z-index:70}
+  .modal{background:#fff;border-radius:14px;padding:22px 22px 18px;max-width:440px;width:90%;box-shadow:0 18px 50px rgba(0,0,0,.3);animation:slidein .18s ease}
+  .modal .ttl{font-size:19px;font-weight:600;margin-bottom:10px;display:flex;gap:9px;align-items:center}
+  .modal .bd{font-size:15px;color:#454b54;line-height:1.6;white-space:pre-line;margin-bottom:20px}
+  .modal .acts{display:flex;gap:10px;justify-content:flex-end}
+  .modal .acts button{padding:9px 16px}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <h1>🎙️ SER Annotation</h1>
+  <button class="primary" id="folderBtn">📁 Thư mục audio</button>
+  <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
+  <button class="primary" id="listBtn">📄 File danh sách (.txt)</button>
+  <input type="file" id="listInput" accept=".txt,text/plain" hidden>
+  <button id="exportBtn" disabled>💾 Export ser_output.txt</button>
+  <span id="srcInfo" class="hint"></span>
+  <span id="saveStatus" class="hint"></span>
+  <span class="spacer"></span>
+  <span id="counter"></span>
+</div>
+
+<div id="layout">
+  <div id="sidebar">
+    <div class="shead"><span>Danh sách</span><span class="spacer"></span><span id="folderName"></span></div>
+    <div id="list"></div>
+  </div>
+  <div id="main">
+    <div id="empty" class="empty">
+      Chọn <b>📁 Thư mục audio</b> (chứa các file <code>.wav</code>) và <b>📄 File danh sách (.txt)</b> tương ứng.<br>
+      <span class="hint">File danh sách có thể nằm ở bất kỳ đâu (kể cả <code>ser_output.txt</code> vừa export ra Downloads) — không cần copy vào thư mục audio. Export sẽ tải về <code>ser_output.txt</code> với cột nhãn (negative/neutral/positive); lần sau chỉ cần chọn lại file đó làm danh sách.</span>
+    </div>
+    <div id="editor" style="display:none">
+      <div class="panel">
+        <div class="fname" id="fname"></div>
+        <div class="hint" id="fmeta"></div>
+        <div id="wfWrap">
+          <canvas id="wf"></canvas>
+          <div id="cursor"></div>
+        </div>
+        <div class="controls">
+          <button id="playBtn">▶</button>
+          <button id="replayBtn" title="Phát lại từ đầu (R)">⏮</button>
+          <span id="time">0:00 / 0:00</span>
+          <div class="speed">
+            Tốc độ <input type="range" id="speed" min="0.5" max="2" step="0.05" value="1"> <b id="speedVal">1.0×</b>
+          </div>
+          <div class="speed">
+            🔊 <input type="range" id="volume" min="0" max="3" step="0.05" value="1"> <b id="volVal">100%</b>
+          </div>
+        </div>
+        <div class="labels">
+          <button class="lbl-neg" data-label="negative" id="bNeg">Negative <kbd>1</kbd></button>
+          <button class="lbl-neu" data-label="neutral"  id="bNeu">Neutral <kbd>2</kbd></button>
+          <button class="lbl-pos" data-label="positive" id="bPos">Positive <kbd>3</kbd></button>
+        </div>
+        <div class="nav">
+          <button id="backBtn">◀ Trước</button>
+          <span class="spacer"></span>
+          <button class="primary" id="saveBtn">💾 Lưu <kbd>Enter</kbd></button>
+          <span class="spacer"></span>
+          <button id="nextBtn">Sau ▶</button>
+        </div>
+        <div class="hint" id="statusLabel" style="text-align:center"></div>
+        <div class="hint">Phím tắt: <kbd>Space</kbd> phát/dừng · <kbd>R</kbd> phát lại từ đầu · <kbd>1/2/3</kbd> gán nhãn · <kbd>Enter</kbd> lưu · <kbd>J</kbd>/<kbd>K</kbd> file sau/trước · click vào waveform để phát từ điểm đó.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<audio id="audio"></audio>
+
+<div id="toasts"></div>
+<div id="modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="ttl" id="modalTtl"></div>
+    <div class="bd" id="modalBd"></div>
+    <div class="acts">
+      <button id="modalCancel">Huỷ</button>
+      <button class="primary" id="modalOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SEP = "\t";                 // phân tách tên file và nhãn trong ser.txt
+const OUT_NAME = "ser_output.txt";// tên file khi export
+const LABELS = ["negative","neutral","positive"];
+const SHORT = {negative:"neg", neutral:"neu", positive:"pos"};
+
+let items = [];                   // [{name, label, status, file|null, audioBuf|null}]  status: "" | "edited" | "confirmed"
+let current = -1;
+let folderName = "";
+let dirty = false;                // có thay đổi chưa export ra ser.txt
+
+const $ = id => document.getElementById(id);
+const audio = $("audio");
+
+/* ---------- toast + modal (thay alert/confirm) ---------- */
+const TOAST_IC = {success:"✅", error:"⚠️", info:"ℹ️"};
+function toast(msg, type="info", ms=3200){
+  const el = document.createElement("div");
+  el.className = "toast " + type;
+  el.style.animation = "slidein .2s ease";
+  el.innerHTML = `<span class="ic">${TOAST_IC[type]||""}</span><span>${msg}</span>`;
+  $("toasts").appendChild(el);
+  setTimeout(()=>{ el.style.opacity = "0"; setTimeout(()=>el.remove(), 300); }, ms);
+}
+function modalConfirm({title, body, icon="", okText="OK", cancelText="Huỷ"}){
+  return new Promise(res=>{
+    $("modalTtl").innerHTML = (icon?`<span>${icon}</span>`:"") + `<span>${title}</span>`;
+    $("modalBd").textContent = body;
+    $("modalOk").textContent = okText;
+    $("modalCancel").textContent = cancelText;
+    $("modal").style.display = "flex";
+    const done = v => {
+      $("modal").style.display = "none";
+      $("modalOk").onclick = $("modalCancel").onclick = $("modal").onclick = null;
+      document.removeEventListener("keydown", onKey, true);
+      res(v);
+    };
+    const onKey = e => { if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); done(false); }
+                         else if(e.key==="Enter"){ e.preventDefault(); e.stopPropagation(); done(true); } };
+    $("modalOk").onclick = ()=>done(true);
+    $("modalCancel").onclick = ()=>done(false);
+    $("modal").onclick = e => { if(e.target===$("modal")) done(false); };
+    document.addEventListener("keydown", onKey, true);
+  });
+}
+
+/* ---------- chọn thư mục audio + file danh sách (2 nút riêng) ---------- */
+let audioByBase = null, audioByRel = null;   // map file .wav; null nếu chưa chọn thư mục
+let listFile = null;                          // File .txt danh sách; null nếu chưa chọn
+
+$("folderBtn").onclick = () => $("folderInput").click();
+$("folderInput").onchange = e => chooseFolder([...e.target.files]);
+$("listBtn").onclick = () => $("listInput").click();
+$("listInput").onchange = e => { const f = e.target.files[0]; if(f){ listFile = f; updateSrcInfo(); tryBuild(); } };
+
+function basename(p){ return p.split("/").pop(); }
+
+function chooseFolder(files){
+  if(!files.length) return;
+  folderName = (files[0].webkitRelativePath || "").split("/")[0] || "";
+  const byBase = new Map(), byRel = new Map();
+  for(const f of files){
+    const rel = f.webkitRelativePath || f.name;
+    const inside = rel.split("/").slice(1).join("/");   // bỏ tên thư mục gốc
+    byBase.set(basename(rel), f);
+    byRel.set(rel, f); byRel.set(inside, f);
+  }
+  audioByBase = byBase; audioByRel = byRel;
+  updateSrcInfo();
+  const wavs = files.filter(f=>/\.wav$/i.test(f.name)).length;
+  toast(`Đã chọn thư mục audio <b>${escapeHtml(folderName)}</b> — ${wavs} file .wav`, "success", 3000);
+  tryBuild();
+}
+
+function updateSrcInfo(){
+  const fOk = audioByBase ? `📁 <b>${escapeHtml(folderName||"?")}</b>` : '📁 <span style="color:#c62828">chưa chọn thư mục</span>';
+  const lOk = listFile ? `📄 <b>${escapeHtml(listFile.name)}</b>` : '📄 <span style="color:#c62828">chưa chọn .txt</span>';
+  $("srcInfo").innerHTML = fOk + " · " + lOk;
+}
+
+async function tryBuild(){
+  if(!audioByBase || !listFile) return;   // cần cả thư mục audio lẫn file danh sách
+  const byBase = audioByBase, byRel = audioByRel;
+  const loadedName = listFile.name;
+
+  const text = await listFile.text();
+  const built = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).map(line=>{
+    const parts = line.split(SEP);
+    const name = parts[0].trim();
+    let label = (parts[1]||"").trim().toLowerCase();
+    if(!LABELS.includes(label)) label = "";
+    const status = label ? "confirmed" : "";   // nhãn có sẵn trong file => coi như đã lưu
+    const file = byRel.get(name) || byBase.get(basename(name)) || null;
+    return { name, label, status, file, audioBuf:null };
+  });
+
+  // kiểm tra file trong danh sách có tồn tại trong thư mục audio không
+  const missing = built.filter(it=>!it.file);
+  if(missing.length){
+    const sample = missing.slice(0,5).map(it=>"• "+it.name).join("\n");
+    const more = missing.length>5 ? `\n…và ${missing.length-5} file khác.` : "";
+    const ok = await modalConfirm({
+      icon: "⚠️",
+      title: "Thiếu file audio",
+      body: `Có ${missing.length}/${built.length} file trong danh sách KHÔNG tìm thấy trong thư mục audio:\n\n${sample}${more}\n\n• Tiếp tục: vẫn load, các file thiếu bị bỏ qua (không gán nhãn được nhưng vẫn giữ trong file khi export).\n• Không load: kiểm tra lại thư mục/danh sách rồi chọn lại.`,
+      okText: "Tiếp tục (bỏ qua file thiếu)",
+      cancelText: "Không load"
+    });
+    if(!ok){ toast("Đã huỷ — chưa load danh sách. Kiểm tra lại thư mục audio hoặc file .txt.", "info", 4000); return; }
+  }
+
+  items = built;
+  current = -1; dirty = false;
+  $("folderName").textContent = folderName + " — " + loadedName;
+
+  // hỏi rõ có khôi phục bản nháp đang làm dở (không tự động) để tránh quên export
+  const draft = loadLocal();
+  const draftCount = Object.keys(draft).length;
+  if(draftCount){
+    const ok = await modalConfirm({
+      icon: "📝",
+      title: "Khôi phục bản nháp?",
+      body: `Thư mục này có một bản nháp đang làm dở trong trình duyệt (${draftCount} nhãn, chưa export).\n\n• Khôi phục: dùng lại các nhãn trong bản nháp.\n• Dùng file: chỉ lấy nhãn đã có trong ${loadedName}.`,
+      okText: "Khôi phục bản nháp",
+      cancelText: "Dùng file"
+    });
+    if(ok){
+      for(const it of items){ const d = draft[it.name]; if(d){ it.label = d.label; it.status = d.status || "edited"; } }
+      dirty = true;   // bản nháp có thể chứa nhãn chưa export
+      toast("Đã khôi phục bản nháp — nhớ Export khi xong.", "info", 4000);
+    }
+  }
+  $("empty").style.display = "none";
+  $("exportBtn").disabled = false;
+  renderList(); updateCounter();
+  // chọn file chưa làm đầu tiên (hoặc file đầu)
+  const firstTodo = items.findIndex(it=>it.status!=="confirmed" && it.file);
+  select(firstTodo>=0 ? firstTodo : items.findIndex(it=>it.file));
+
+  const miss = items.filter(it=>!it.file).length;
+  toast(`Đã mở <b>${loadedName}</b> — ${items.length} file` + (miss?` · thiếu ${miss} .wav`:""), miss?"info":"success", 4000);
+}
+
+/* ---------- sidebar ---------- */
+function renderList(){
+  const html = items.map((it,i)=>{
+    const cls = ["sitem", i===current?"active":"", it.file?"":"missing"].join(" ");
+    const dot = it.status ? `dot ${it.status}` : "dot";
+    const tag = it.label ? `<span class="tag ${SHORT[it.label]}">${SHORT[it.label]}</span>` : "";
+    const miss = it.file ? "" : ' title="Không tìm thấy file .wav"';
+    return `<div class="${cls}" data-i="${i}"${miss}><span class="${dot}"></span><span class="txt">${escapeHtml(it.name)}</span>${tag}</div>`;
+  }).join("");
+  $("list").innerHTML = html;
+  [...$("list").children].forEach(el=>{
+    el.onclick = ()=> select(+el.dataset.i);
+  });
+  // cuộn để câu đang chọn luôn nằm trong tầm nhìn (hoãn tới sau layout để đúng cả lúc mới mở)
+  const act = $("list").children[current];
+  if(act) requestAnimationFrame(()=> act.scrollIntoView({block:"nearest"}));
+}
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function updateCounter(){
+  const conf = items.filter(it=>it.status==="confirmed").length;
+  const edit = items.filter(it=>it.status==="edited").length;
+  const miss = items.filter(it=>!it.file).length;
+  const nNeg = items.filter(it=>it.label==="negative").length;
+  const nNeu = items.filter(it=>it.label==="neutral").length;
+  const nPos = items.filter(it=>it.label==="positive").length;
+  const tally = `<span style="color:var(--neg)">neg ${nNeg}</span> · `
+    + `<span style="color:var(--neu)">neu ${nNeu}</span> · `
+    + `<span style="color:var(--pos)">pos ${nPos}</span>`;
+  $("counter").innerHTML = `${tally} &nbsp;|&nbsp; Đã lưu <b>${conf}</b> / ${items.length}`
+    + (edit?` · ✏️ ${edit}`:"") + (miss?` · thiếu file: ${miss}`:"");
+  $("saveStatus").innerHTML = dirty
+    ? '<span style="color:#c62828;font-weight:600">⚠ chưa export</span>'
+    : (items.length?'<span style="color:#2e7d32">✓ đã export</span>':"");
+}
+
+/* ---------- chọn & nạp audio ---------- */
+let audioCtx;
+async function select(i){
+  if(i<0 || i>=items.length) return;
+  current = i;
+  renderList();
+  const it = items[i];
+  $("editor").style.display = it.file ? "block" : "none";
+  if(!it.file){ $("empty").style.display="block"; $("empty").innerHTML="<b>Thiếu file .wav</b><br><span class='hint'>"+escapeHtml(it.name)+" không có trong thư mục đã chọn.</span>"; return; }
+  $("empty").style.display="none";
+
+  $("fname").textContent = it.name;
+  $("fmeta").textContent = "Đang giải mã…";
+  highlightLabel(it.label);
+  updateStatusLabel();
+
+  audio.pause(); $("playBtn").textContent="▶"; hideCursor();
+  audio.src = URL.createObjectURL(it.file);
+  audio.playbackRate = +$("speed").value;
+  applyVolume();
+
+  // giải mã để vẽ waveform (cache theo từng item)
+  try{
+    if(!it.audioBuf){
+      const buf = await it.file.arrayBuffer();
+      it.wavMeta = parseWavHeader(buf);   // sample rate/kênh THẬT từ header WAV
+      audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+      it.audioBuf = await audioCtx.decodeAudioData(buf.slice(0));
+    }
+    if(current===i){ drawWaveform(it.audioBuf); $("fmeta").textContent = fmtMeta(it.audioBuf, it.wavMeta); }
+  }catch(err){
+    $("fmeta").textContent = "Không vẽ được waveform ("+err.message+") — vẫn phát được.";
+    clearWaveform();
+  }
+}
+// decodeAudioData resample về rate của AudioContext, nên đọc rate thật từ header WAV
+function parseWavHeader(ab){
+  try{
+    const dv = new DataView(ab);
+    if(dv.getUint32(0,false)!==0x52494646 || dv.getUint32(8,false)!==0x57415645) return null; // 'RIFF'..'WAVE'
+    let off = 12;
+    while(off+8 <= dv.byteLength){
+      const id = dv.getUint32(off,false), size = dv.getUint32(off+4,true);
+      if(id===0x666d7420){ // 'fmt '
+        return { channels: dv.getUint16(off+10,true), sampleRate: dv.getUint32(off+12,true), bitsPerSample: dv.getUint16(off+22,true) };
+      }
+      off += 8 + size + (size%2);
+    }
+  }catch(_){}
+  return null;
+}
+function fmtMeta(b, wav){
+  const rate = wav && wav.sampleRate ? wav.sampleRate : b.sampleRate;
+  const ch = wav && wav.channels ? wav.channels : b.numberOfChannels;
+  const bits = wav && wav.bitsPerSample ? ` · ${wav.bitsPerSample}-bit` : "";
+  const note = wav ? "" : " (rate sau giải mã)";   // không phải WAV: chỉ có rate đã resample
+  return `${b.duration.toFixed(2)}s · ${rate.toLocaleString("en-US")} Hz · ${ch} kênh${bits}${note}`;
+}
+
+/* ---------- waveform ---------- */
+const wf = $("wf");
+function sizeCanvas(){
+  const r = wf.getBoundingClientRect();
+  wf.width = Math.max(300, r.width)*devicePixelRatio;
+  wf.height = 140*devicePixelRatio;
+}
+function clearWaveform(){ sizeCanvas(); wf.getContext("2d").clearRect(0,0,wf.width,wf.height); }
+function drawWaveform(buf){
+  sizeCanvas();
+  const ctx = wf.getContext("2d");
+  const W = wf.width, H = wf.height, mid = H/2;
+  ctx.clearRect(0,0,W,H);
+  const data = buf.getChannelData(0);
+  const step = Math.max(1, Math.floor(data.length / W));
+  ctx.fillStyle = "#9bb8e8";
+  for(let x=0; x<W; x++){
+    let min=1, max=-1;
+    const start = x*step;
+    for(let j=0;j<step;j++){ const v=data[start+j]; if(v<min)min=v; if(v>max)max=v; }
+    const y1 = mid + min*mid, y2 = mid + max*mid;
+    ctx.fillRect(x, y1, 1, Math.max(1, y2-y1));
+  }
+  ctx.strokeStyle="#cfd8e6"; ctx.beginPath(); ctx.moveTo(0,mid); ctx.lineTo(W,mid); ctx.stroke();
+}
+
+// click waveform -> seek + play
+wf.onclick = e=>{
+  if(!audio.duration) return;
+  const r = wf.getBoundingClientRect();
+  const frac = (e.clientX - r.left)/r.width;
+  audio.currentTime = Math.max(0, Math.min(1,frac))*audio.duration;
+  audio.play();
+};
+
+/* ---------- playback ---------- */
+$("playBtn").onclick = togglePlay;
+$("replayBtn").onclick = replay;
+function togglePlay(){ if(audio.paused) audio.play(); else audio.pause(); }
+function replay(){ if(!audio.src) return; audio.currentTime = 0; audio.play(); }
+audio.onplay = ()=>{ $("playBtn").textContent="⏸"; if(audioCtx && audioCtx.state==="suspended") audioCtx.resume(); };
+audio.onpause = ()=> $("playBtn").textContent="▶";
+audio.onended = ()=>{ $("playBtn").textContent="▶"; };
+audio.ontimeupdate = ()=>{
+  $("time").textContent = `${fmtT(audio.currentTime)} / ${fmtT(audio.duration||0)}`;
+  if(audio.duration){ const c=$("cursor"); c.style.display="block"; c.style.left=(audio.currentTime/audio.duration*100)+"%"; }
+};
+function hideCursor(){ $("cursor").style.display="none"; $("time").textContent="0:00 / 0:00"; }
+function fmtT(s){ s=Math.floor(s||0); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+/* ---------- speed ---------- */
+$("speed").oninput = e=>{ const v=+e.target.value; audio.playbackRate=v; $("speedVal").textContent=v.toFixed(2).replace(/0$/,"")+"×"; };
+
+/* ---------- âm lượng (GainNode cho phép >100%) ---------- */
+let gainNode=null, mediaSrc=null;
+function ensureGain(){
+  try{
+    audioCtx = audioCtx || new (window.AudioContext||window.webkitAudioContext)();
+    if(!mediaSrc){
+      mediaSrc = audioCtx.createMediaElementSource(audio);
+      gainNode = audioCtx.createGain();
+      mediaSrc.connect(gainNode); gainNode.connect(audioCtx.destination);
+    }
+    if(audioCtx.state==="suspended") audioCtx.resume();
+  }catch(_){ /* không dựng được graph -> dùng audio.volume (tối đa 100%) */ }
+}
+function applyVolume(){
+  const v = +$("volume").value;
+  if(gainNode) gainNode.gain.value = v;       // có graph: khuếch đại tới 300%
+  else audio.volume = Math.min(1, v);          // chưa có graph: giới hạn 100%
+}
+$("volume").oninput = e=>{
+  const v = +e.target.value;
+  if(v>1) ensureGain();                         // chỉ cần graph khi vượt 100%
+  applyVolume();
+  $("volVal").textContent = Math.round(v*100)+"%";
+};
+
+/* ---------- gán nhãn (chỉ chọn, KHÔNG nhảy câu) ---------- */
+function setLabel(label){
+  if(current<0) return;
+  const it = items[current];
+  it.label = label;
+  it.status = "edited";       // chọn nhãn = đang sửa, phải bấm Lưu mới thành "đã lưu"
+  highlightLabel(label);
+  updateStatusLabel();
+  renderList(); markDirty();
+}
+function saveCurrent(){
+  if(current<0) return;
+  const it = items[current];
+  if(!it.label){ flashStatus("Chưa chọn nhãn"); return; }
+  it.status = "confirmed";
+  updateStatusLabel();
+  renderList(); markDirty();
+  if(current<items.length-1) select(current+1);   // lưu xong nhảy sang câu sau
+}
+function highlightLabel(label){
+  $("bNeg").classList.toggle("sel", label==="negative");
+  $("bNeu").classList.toggle("sel", label==="neutral");
+  $("bPos").classList.toggle("sel", label==="positive");
+}
+function updateStatusLabel(){
+  const it = items[current]; if(!it) return;
+  $("statusLabel").innerHTML = it.status==="confirmed" ? '<span class="ok">✔ đã lưu</span>'
+    : it.status==="edited" ? '<span class="edit">✏️ đã chọn, chưa lưu</span>'
+    : '<span class="hint">chưa làm</span>';
+}
+function flashStatus(msg){ $("statusLabel").innerHTML = '<span style="color:#c62828">'+msg+'</span>'; }
+
+document.querySelectorAll(".labels button").forEach(b=> b.onclick = ()=> setLabel(b.dataset.label));
+$("saveBtn").onclick = saveCurrent;
+$("backBtn").onclick = ()=>{ if(current>0) select(current-1); };
+$("nextBtn").onclick = ()=>{ if(current<items.length-1) select(current+1); };
+
+/* ---------- phím tắt ---------- */
+document.addEventListener("keydown", e=>{
+  if(current<0) return;
+  if(e.code==="Space"){ e.preventDefault(); togglePlay(); }
+  else if(e.key==="r"||e.key==="R"){ e.preventDefault(); replay(); }
+  else if(e.key==="1") setLabel("negative");
+  else if(e.key==="2") setLabel("neutral");
+  else if(e.key==="3") setLabel("positive");
+  else if(e.key==="Enter"){ e.preventDefault(); saveCurrent(); }
+  else if(e.key==="j"||e.key==="J"){ if(current<items.length-1) select(current+1); }
+  else if(e.key==="k"||e.key==="K"){ if(current>0) select(current-1); }
+});
+
+/* ---------- autosave trình duyệt + đánh dấu chưa export ---------- */
+function lsKey(){ return "ser_label::" + (folderName||"_"); }
+function saveLocal(){
+  const map = {};
+  for(const it of items) if(it.label) map[it.name] = {label:it.label, status:it.status};
+  try{ localStorage.setItem(lsKey(), JSON.stringify(map)); }catch(_){}
+}
+function loadLocal(){
+  try{ return JSON.parse(localStorage.getItem(lsKey())||"{}"); }catch(_){ return {}; }
+}
+function clearLocal(){
+  try{ localStorage.removeItem(lsKey()); }catch(_){}
+}
+let saveTimer=null;
+function markDirty(){ dirty=true; updateCounter(); clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,300); }
+
+/* ---------- export ---------- */
+$("exportBtn").onclick = ()=>{
+  const out = items.map(it=> it.label ? it.name+SEP+it.label : it.name).join("\n")+"\n";
+  const blob = new Blob([out], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = OUT_NAME;
+  a.click(); URL.revokeObjectURL(a.href);
+  dirty=false; clearLocal(); updateCounter();   // export xong: xoá nháp, phiên sau bắt đầu sạch
+  const conf = items.filter(it=>it.status==="confirmed").length;
+  toast(`Đã export <b>${OUT_NAME}</b> — ${conf}/${items.length} đã lưu.`, "success");
+};
+
+window.addEventListener("beforeunload", e=>{ if(dirty){ e.preventDefault(); e.returnValue=""; } });
+window.addEventListener("resize", ()=>{ if(current>=0 && items[current].audioBuf) drawWaveform(items[current].audioBuf); });
+updateSrcInfo();   // hiển thị trạng thái "chưa chọn" ngay từ đầu
+</script>
+</body>
+</html>
