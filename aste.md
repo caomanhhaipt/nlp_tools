@@ -35,7 +35,7 @@ Khi mới mở, tool hiển thị hướng dẫn nhanh ở giữa. Ba vùng chí
 Mỗi dòng trong file `.txt` đầu vào có cấu trúc:
 
 ```
-token1 token2 ... #### #### #### [([idx_target], [idx_opinion], 'SENTIMENT')]
+token1 token2 ...#### #### ####[([idx_target], [idx_opinion], 'SENTIMENT')]
 ```
 
 - Tokens phân tách bằng **dấu cách**.
@@ -46,12 +46,12 @@ token1 token2 ... #### #### #### [([idx_target], [idx_opinion], 'SENTIMENT')]
 
 **Ví dụ:**
 ```
-The battery life is amazing but the screen is terrible #### #### #### [([1, 2], [4], 'POS'), ([7], [9], 'NEG')]
+The battery life is amazing but the screen is terrible#### #### ####[([1, 2], [4], 'POS'), ([7], [9], 'NEG')]
 ```
 
 File **chưa có annotation** (câu trắng):
 ```
-Service was excellent and food tasted wonderful #### #### #### []
+Service was excellent and food tasted wonderful#### #### ####[]
 ```
 
 ---

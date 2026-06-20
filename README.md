@@ -17,7 +17,7 @@ Annotate text sentences with structured sentiment triplets of the form **(target
 Each line in the input `.txt` file follows this structure:
 
 ```
-token1 token2 ... #### #### #### [([target_indices], [opinion_indices], 'SENTIMENT')]
+token1 token2 ...#### #### ####[([target_indices], [opinion_indices], 'SENTIMENT')]
 ```
 
 - Tokens are separated by spaces.
@@ -28,7 +28,7 @@ token1 token2 ... #### #### #### [([target_indices], [opinion_indices], 'SENTIME
 
 **Example:**
 ```
-The battery life is great but the screen is terrible #### #### #### [([2, 3], [4], 'POS'), ([7], [9], 'NEG')]
+The battery life is great but the screen is terrible#### #### ####[([2, 3], [4], 'POS'), ([7], [9], 'NEG')]
 ```
 
 Exported files include an extra tab-separated status column (`edited` / `confirmed`) so you can resume exactly where you left off.
