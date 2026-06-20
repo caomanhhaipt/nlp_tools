@@ -15,6 +15,8 @@
   body{margin:0;font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;background:#f5f6f8}
   button{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:6px 10px;font-size:13px}
   button:hover{background:#f0f2f5}
+  .guide-link{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:6px 10px;font-size:13px;text-decoration:none;color:inherit}
+  .guide-link:hover{background:#f0f2f5}
   button.primary{background:#1565c0;color:#fff;border-color:#1565c0}
   button.primary:hover{background:#0d47a1}
   select{font-family:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;background:#fff}
@@ -77,10 +79,12 @@
 </head>
 <body>
 <div id="topbar">
+  <a class="guide-link" href="index.html" title="Trang chủ">🏠</a>
   <h1>🏷️ ASTE Annotation</h1>
   <input type="file" id="fileInput" accept=".txt" style="display:none">
   <button onclick="fileInput.click()">📂 Import .txt</button>
   <button onclick="exportTxt()">💾 Export .txt</button>
+  <a class="guide-link" href="aste.md" target="_blank">📖 Hướng dẫn</a>
   <span style="flex:1"></span>
   <span id="saveStatus" class="hint"></span>
   <span id="progress" class="hint"></span>

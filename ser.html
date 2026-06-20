@@ -15,6 +15,8 @@
   body{margin:0;font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;background:#f5f6f8;font-size:15px}
   button{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 12px;font-size:15px}
   button:hover{background:#f0f2f5}
+  .guide-link{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 12px;font-size:15px;text-decoration:none;color:inherit}
+  .guide-link:hover{background:#f0f2f5}
   button:disabled{opacity:.45;cursor:not-allowed}
   button.primary{background:#1565c0;color:#fff;border-color:#1565c0}
   button.primary:hover{background:#0d47a1}
@@ -77,12 +79,14 @@
 </head>
 <body>
 <div id="topbar">
+  <a class="guide-link" href="index.html" title="Trang chủ">🏠</a>
   <h1>🎙️ SER Annotation</h1>
   <button class="primary" id="folderBtn">📁 Thư mục audio</button>
   <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
   <button class="primary" id="listBtn">📄 File danh sách (.txt)</button>
   <input type="file" id="listInput" accept=".txt,text/plain" hidden>
   <button id="exportBtn" disabled>💾 Export ser_output.txt</button>
+  <a class="guide-link" href="ser.md" target="_blank">📖 Hướng dẫn</a>
   <span id="srcInfo" class="hint"></span>
   <span id="saveStatus" class="hint"></span>
   <span class="spacer"></span>
