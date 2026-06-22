@@ -134,6 +134,46 @@ Sau khi export:
 
 ---
 
+## Chế độ Verify task (kiểm định)
+
+Tích ô **✅ Verify task** trên thanh công cụ để chuyển sang chế độ kiểm định: file danh sách chứa nhãn của **2 annotator trước**, người làm hiện tại chỉ cần **chọn 1 trong 2 nhãn** đó.
+
+### Định dạng file (3 cột)
+
+File `.txt` mỗi dòng có **3 cột** ngăn cách bằng **tab**: tên file, nhãn của user 1, nhãn của user 2.
+
+```
+audio_001.wav	positive	neutral
+audio_002.wav	negative	neutral
+audio_003.wav	positive	positive
+```
+
+### Cách hoạt động
+
+- Mọi thao tác (nghe, waveform, điều hướng, phím tắt) **giống hệt task thường**.
+- Mỗi file chỉ hiện **2 nút nhãn** đúng bằng nhãn của 2 annotator trước; bạn chọn 1 trong 2. Bấm nhãn khác sẽ bị từ chối.
+- Dòng nào **2 annotator trùng nhau** (ví dụ `audio_003.wav`) được **tự động tính là đã làm** với nhãn đó — không cần thao tác.
+- Khi export, file ra có **thêm cột thứ 4** là nhãn bạn vừa chọn:
+
+```
+audio_001.wav	positive	neutral	positive
+audio_002.wav	negative	neutral	neutral
+audio_003.wav	positive	positive	positive
+```
+
+- Mở lại file đã làm dở: dòng nào **đã có cột 4** thì coi như đã xong, tool bỏ qua khi chọn câu tiếp theo (giống cơ chế cũ).
+
+### Chọn nhầm chế độ / file
+
+Tool tự đếm số cột của file danh sách và cảnh báo nếu không khớp với ô tích:
+
+- **Chưa tích Verify mà chọn file 3–4 cột** → hỏi có muốn **bật Verify task** không.
+- **Đã tích Verify mà chọn file gốc 1–2 cột** → hỏi có muốn **tắt Verify** và load như task thường không.
+
+Đồng ý → tool tự bật/tắt ô tích rồi đọc lại file đúng định dạng.
+
+---
+
 ## Tự động lưu nháp
 
 Mỗi lần nhấn Lưu, nhãn được ghi ngay vào `localStorage` (khóa theo tên thư mục audio). Nếu đóng tab đột ngột, lần sau mở lại và chọn đúng thư mục + danh sách, tool sẽ hỏi có muốn **Khôi phục bản nháp** không.

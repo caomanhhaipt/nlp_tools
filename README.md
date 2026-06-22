@@ -105,6 +105,24 @@ Exported as `ser_output.txt` using the same format (tab-separated filename and l
 
 Labels are continuously saved to `localStorage` (keyed by folder name). Exporting clears the draft. Files missing from the selected folder are skipped but preserved in the export output.
 
+#### Verify Mode
+
+Tick the **✅ Verify task** checkbox in the toolbar to switch to adjudication mode. Here the list file holds the labels from two earlier annotators, and the current annotator picks one of the two.
+
+Input list file is **3 columns** (tab-separated):
+
+```
+audio_001.wav	positive	neutral
+audio_002.wav	negative	neutral
+audio_003.wav	positive	positive
+```
+
+- Only the two reference labels are offered as choices for each file — you select one of them.
+- Rows where both annotators **agree** (e.g. `audio_003.wav`) are auto-confirmed with that label; no action needed.
+- Export adds a **4th column** with the chosen label: `filename	user1	user2	final`.
+- On reload, a row is treated as done when its 4th column has a value.
+- The tool detects a column-count mismatch between the checkbox state and the file, and offers to switch to the correct mode.
+
 ---
 
 ## Running
