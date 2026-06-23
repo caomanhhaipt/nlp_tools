@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentiment Annotation Tool</title>
+<style>
+  :root{
+    --pos:#2e7d32; --pos-bg:#c8e6c9;
+    --neg:#c62828; --neg-bg:#ffcdd2;
+    --neu:#1976d2; --neu-bg:#bbdefb;
+    --border:#d0d4da; --muted:#666;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,"Segoe UI",Roboto,Arial,sans-serif;color:#1a1a1a;background:#f5f6f8;font-size:15px}
+  button{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 12px;font-size:15px}
+  button:hover{background:#f0f2f5}
+  .guide-link{font-family:inherit;cursor:pointer;border:1px solid var(--border);background:#fff;border-radius:6px;padding:7px 12px;font-size:15px;text-decoration:none;color:inherit}
+  .guide-link:hover{background:#f0f2f5}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button.primary{background:#1565c0;color:#fff;border-color:#1565c0}
+  button.primary:hover{background:#0d47a1}
+  #topbar{display:flex;gap:12px;align-items:center;padding:10px 14px;background:#fff;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  #topbar h1{font-size:19px;margin:0 8px 0 0}
+  #topbar .spacer{flex:1}
+  #counter{font-size:14px;color:var(--muted)}
+  #counter b{color:#1a1a1a}
+  #layout{display:grid;grid-template-columns:300px 1fr;height:calc(100vh - 53px)}
+  #sidebar{border-right:1px solid var(--border);background:#fff;overflow-y:auto}
+  .shead{padding:9px 12px;font-size:13px;color:var(--muted);position:sticky;top:0;background:#fff;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+  .shead .spacer{flex:1}
+  .sitem{padding:9px 12px;border-bottom:1px solid #f0f0f0;cursor:pointer;font-size:14px;display:flex;gap:8px;align-items:center}
+  .sitem:hover{background:#f5f8ff}
+  .sitem.active{background:#e3f2fd;font-weight:600}
+  .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;background:#cfd4da}
+  .dot.edited{background:#f9a825} .dot.confirmed{background:#2e7d32}
+  .sitem .num{font-size:11px;color:var(--muted);min-width:30px;font-variant-numeric:tabular-nums}
+  .sitem .txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+  .sitem .tag{font-size:11px;padding:1px 6px;border-radius:4px;color:#fff}
+  .tag.pos{background:var(--pos)} .tag.neg{background:var(--neg)} .tag.neu{background:var(--neu)}
+  #main{padding:18px;overflow-y:auto}
+  .panel{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:14px}
+  .fmeta{font-size:13px;color:var(--muted);margin-bottom:8px}
+  .hint{font-size:13px;color:var(--muted);margin:4px 0}
+  #textBox{font-size:22px;line-height:1.6;padding:24px;border:1px solid var(--border);border-radius:8px;background:#fafbfc;min-height:120px;white-space:pre-wrap;word-break:break-word;margin:8px 0}
+  .labels{display:flex;gap:10px;margin-top:16px}
+  .labels button{flex:1;padding:15px;font-size:17px;font-weight:600;border-width:2px}
+  .lbl-neg{color:var(--neg)} .lbl-neg.sel{background:var(--neg-bg);border-color:var(--neg)}
+  .lbl-neu{color:var(--neu)} .lbl-neu.sel{background:var(--neu-bg);border-color:var(--neu)}
+  .lbl-pos{color:var(--pos)} .lbl-pos.sel{background:var(--pos-bg);border-color:var(--pos)}
+  .nav{display:flex;gap:10px;align-items:center;margin-top:16px}
+  .nav .spacer{flex:1}
+  #statusLabel .ok{color:var(--pos);font-weight:600}
+  #statusLabel .edit{color:#f9a825;font-weight:600}
+  .empty{padding:48px;text-align:center;color:var(--muted)}
+  kbd{background:#eef0f3;border:1px solid #d0d4da;border-bottom-width:2px;border-radius:4px;padding:1px 6px;font-size:12px;font-family:ui-monospace,monospace;color:#333}
+  /* toast + modal */
+  #toasts{position:fixed;top:16px;right:16px;display:flex;flex-direction:column;gap:8px;z-index:60}
+  .toast{background:#fff;border-left:4px solid #1565c0;border-radius:8px;padding:12px 16px 12px 14px;font-size:14px;box-shadow:0 6px 22px rgba(0,0,0,.16);min-width:250px;max-width:360px;display:flex;gap:10px;align-items:flex-start;transition:opacity .3s}
+  .toast .ic{font-size:15px;line-height:1.3}
+  .toast.success{border-color:var(--pos)} .toast.error{border-color:var(--neg)} .toast.info{border-color:#1565c0}
+  @keyframes slidein{from{opacity:0;transform:translateX(24px)}to{opacity:1;transform:none}}
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,24,33,.45);display:flex;align-items:center;justify-content:center;z-index:70}
+  .modal{background:#fff;border-radius:14px;padding:22px 22px 18px;max-width:440px;width:90%;box-shadow:0 18px 50px rgba(0,0,0,.3);animation:slidein .18s ease}
+  .modal .ttl{font-size:19px;font-weight:600;margin-bottom:10px;display:flex;gap:9px;align-items:center}
+  .modal .bd{font-size:15px;color:#454b54;line-height:1.6;white-space:pre-line;margin-bottom:20px}
+  .modal .acts{display:flex;gap:10px;justify-content:flex-end}
+  .modal .acts button{padding:9px 16px}
+</style>
+</head>
+<body>
+<div id="topbar">
+  <a class="guide-link" href="index.html" title="Trang chủ">🏠</a>
+  <h1>📝 Sentiment Annotation</h1>
+  <button class="primary" id="listBtn">📄 File text (.txt)</button>
+  <input type="file" id="listInput" accept=".txt,text/plain" hidden>
+  <button id="exportBtn" disabled>💾 Export sentiment_output.txt</button>
+  <label id="verifyWrap" title="Chế độ kiểm định: file 3 cột (text, nhãn user 1, nhãn user 2), bạn chọn 1 trong 2" style="display:flex;align-items:center;gap:5px;font-size:14px;cursor:pointer;user-select:none">
+    <input type="checkbox" id="verifyChk"> ✅ Verify task
+  </label>
+  <a class="guide-link" href="https://github.com/caomanhhaipt/nlp_tools/blob/main/sentiment.md" target="_blank">📖 Hướng dẫn</a>
+  <span id="srcInfo" class="hint"></span>
+  <span id="saveStatus" class="hint"></span>
+  <span class="spacer"></span>
+  <span id="counter"></span>
+</div>
+
+<div id="layout">
+  <div id="sidebar">
+    <div class="shead"><span>Danh sách</span><span class="spacer"></span><span id="fileName"></span></div>
+    <div id="list"></div>
+  </div>
+  <div id="main">
+    <div id="empty" class="empty">
+      Chọn <b>📄 File text (.txt)</b> — mỗi dòng là một câu cần gán nhãn.<br>
+      <span class="hint">Export sẽ tải về <code>sentiment_output.txt</code> với cột nhãn (negative/neutral/positive); lần sau chỉ cần chọn lại file đó để làm tiếp.</span>
+    </div>
+    <div id="editor" style="display:none">
+      <div class="panel">
+        <div class="fmeta" id="fmeta"></div>
+        <div id="textBox"></div>
+        <div class="labels">
+          <button class="lbl-neg" data-label="negative" id="bNeg">Negative <kbd>1</kbd></button>
+          <button class="lbl-neu" data-label="neutral"  id="bNeu">Neutral <kbd>2</kbd></button>
+          <button class="lbl-pos" data-label="positive" id="bPos">Positive <kbd>3</kbd></button>
+        </div>
+        <div class="hint" id="refRow" style="display:none;text-align:center;margin-top:14px;font-size:15px"></div>
+        <div class="nav">
+          <button id="backBtn">◀ Trước</button>
+          <span class="spacer"></span>
+          <button class="primary" id="saveBtn">💾 Lưu <kbd>Enter</kbd></button>
+          <span class="spacer"></span>
+          <button id="nextBtn">Sau ▶</button>
+        </div>
+        <div class="hint" id="statusLabel" style="text-align:center"></div>
+        <div class="hint">Phím tắt: <kbd>1/2/3</kbd> gán nhãn · <kbd>Enter</kbd> lưu · <kbd>J</kbd>/<kbd>K</kbd> câu sau/trước.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+<div id="modal" class="modal-overlay" style="display:none">
+  <div class="modal">
+    <div class="ttl" id="modalTtl"></div>
+    <div class="bd" id="modalBd"></div>
+    <div class="acts">
+      <button id="modalCancel">Huỷ</button>
+      <button class="primary" id="modalOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SEP = "\t";                       // phân tách text và nhãn
+const OUT_NAME = "sentiment_output.txt";// tên file khi export
+const LABELS = ["negative","neutral","positive"];
+const SHORT = {negative:"neg", neutral:"neu", positive:"pos"};
+
+let items = [];                   // [{text, label, status, refA, refB}]  status: "" | "edited" | "confirmed"
+let current = -1;
+let fileName = "";
+let dirty = false;                // có thay đổi chưa export
+let verifyMode = false;           // chế độ kiểm định: file 3 cột, chọn 1 trong 2 nhãn tham chiếu, export thêm cột 4
+function normLabel(x){ const v=(x||"").trim().toLowerCase(); return LABELS.includes(v)?v:""; }
+
+const $ = id => document.getElementById(id);
+
+/* ---------- toast + modal (thay alert/confirm) ---------- */
+const TOAST_IC = {success:"✅", error:"⚠️", info:"ℹ️"};
+function toast(msg, type="info", ms=3200){
+  const el = document.createElement("div");
+  el.className = "toast " + type;
+  el.style.animation = "slidein .2s ease";
+  el.innerHTML = `<span class="ic">${TOAST_IC[type]||""}</span><span>${msg}</span>`;
+  $("toasts").appendChild(el);
+  setTimeout(()=>{ el.style.opacity = "0"; setTimeout(()=>el.remove(), 300); }, ms);
+}
+function modalConfirm({title, body, icon="", okText="OK", cancelText="Huỷ"}){
+  return new Promise(res=>{
+    $("modalTtl").innerHTML = (icon?`<span>${icon}</span>`:"") + `<span>${title}</span>`;
+    $("modalBd").textContent = body;
+    $("modalOk").textContent = okText;
+    $("modalCancel").textContent = cancelText;
+    $("modal").style.display = "flex";
+    const done = v => {
+      $("modal").style.display = "none";
+      $("modalOk").onclick = $("modalCancel").onclick = $("modal").onclick = null;
+      document.removeEventListener("keydown", onKey, true);
+      res(v);
+    };
+    const onKey = e => { if(e.key==="Escape"){ e.preventDefault(); e.stopPropagation(); done(false); }
+                         else if(e.key==="Enter"){ e.preventDefault(); e.stopPropagation(); done(true); } };
+    $("modalOk").onclick = ()=>done(true);
+    $("modalCancel").onclick = ()=>done(false);
+    $("modal").onclick = e => { if(e.target===$("modal")) done(false); };
+    document.addEventListener("keydown", onKey, true);
+  });
+}
+
+/* ---------- chọn file danh sách ---------- */
+let listFile = null;                          // File .txt danh sách; null nếu chưa chọn
+
+$("listBtn").onclick = () => $("listInput").click();
+$("listInput").onchange = e => { const f = e.target.files[0]; if(f){ listFile = f; updateSrcInfo(); tryBuild(); } };
+$("verifyChk").onchange = e => {
+  verifyMode = e.target.checked;
+  updateSrcInfo(); updateEmptyHelp();
+  if(listFile) tryBuild();   // đọc lại file đang mở theo định dạng của chế độ mới
+};
+
+function updateSrcInfo(){
+  const lOk = listFile ? `📄 <b>${escapeHtml(listFile.name)}</b>` : '📄 <span style="color:#c62828">chưa chọn .txt</span>';
+  const vOk = verifyMode ? ' · <b style="color:#1565c0">✅ verify</b>' : '';
+  $("srcInfo").innerHTML = lOk + vOk;
+}
+
+function updateEmptyHelp(){
+  if(items.length) return;   // chỉ đổi khi đang ở màn hình trống
+  $("empty").innerHTML = verifyMode
+    ? `Chế độ <b>✅ Verify task</b> đang BẬT. Chọn <b>📄 File text</b> dạng <b>3 cột</b>: <code>text ⇥ nhãn_user1 ⇥ nhãn_user2</code>.<br>`
+      + `<span class="hint">Bạn chỉ chọn 1 trong 2 nhãn mà 2 annotator trước đã gán. Export sẽ thêm <b>cột thứ 4</b> là nhãn của bạn (<code>text ⇥ user1 ⇥ user2 ⇥ nhãn_mới</code>). Dòng đã có cột 4 được tính là đã làm.</span>`
+    : `Chọn <b>📄 File text (.txt)</b> — mỗi dòng là một câu cần gán nhãn.<br>`
+      + `<span class="hint">Export sẽ tải về <code>sentiment_output.txt</code> với cột nhãn (negative/neutral/positive); lần sau chỉ cần chọn lại file đó để làm tiếp.</span>`;
+}
+
+async function tryBuild(){
+  if(!listFile) return;
+  const loadedName = listFile.name;
+
+  const text = await listFile.text();
+  const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+
+  // phát hiện số cột thực tế để cảnh báo nếu chọn nhầm chế độ (file gốc 1-2 cột vs file verify 3-4 cột)
+  let detectedCols = 1;
+  for(const l of lines){ const n = l.split(SEP).length; if(n>detectedCols) detectedCols = n; }
+  const looksVerify = detectedCols >= 3;
+  if(lines.length){
+    if(verifyMode && !looksVerify){
+      const ok = await modalConfirm({
+        icon:"⚠️", title:"File không đúng định dạng Verify",
+        body:`Chế độ Verify task đang BẬT, nhưng file chỉ có ${detectedCols} cột (cần 3 cột: text · nhãn user 1 · nhãn user 2).\n\nCó thể bạn đang chọn nhầm file gán nhãn gốc.\n\n• Tắt Verify & load như task thường.\n• Huỷ để chọn lại file đúng.`,
+        okText:"Tắt Verify & load thường", cancelText:"Huỷ"
+      });
+      if(!ok){ toast("Đã huỷ — hãy chọn file 3 cột cho chế độ Verify.", "info", 4500); return; }
+      verifyMode = false; $("verifyChk").checked = false; updateSrcInfo(); updateEmptyHelp();
+      return tryBuild();
+    }
+    if(!verifyMode && looksVerify){
+      const ok = await modalConfirm({
+        icon:"⚠️", title:"File giống định dạng Verify",
+        body:`File có ${detectedCols} cột — giống file Verify task (text · nhãn user 1 · nhãn user 2 · [nhãn mới]).\n\nChế độ Verify task đang TẮT: nếu load thường, tool sẽ coi cột 2 là nhãn và xem mọi dòng là đã làm.\n\n• Bật Verify task & load đúng.\n• Huỷ để chọn lại file.`,
+        okText:"Bật Verify task & load", cancelText:"Huỷ"
+      });
+      if(!ok){ toast("Đã huỷ — bật ✅ Verify task nếu đây là file kiểm định.", "info", 4500); return; }
+      verifyMode = true; $("verifyChk").checked = true; updateSrcInfo(); updateEmptyHelp();
+      return tryBuild();
+    }
+  }
+
+  const built = lines.map(line=>{
+    const parts = line.split(SEP);
+    if(verifyMode){
+      // cột 1 = text, cột 2/3 = nhãn 2 user trước, cột 4 (nếu có) = nhãn mới đã làm
+      const text = parts[0];
+      const refA = normLabel(parts[1]), refB = normLabel(parts[2]);
+      let label = normLabel(parts[3]);
+      // 2 annotator trùng nhau -> tự lấy nhãn đó, coi như đã verify, không cần chọn lại
+      if(!label && refA && refB && refA===refB) label = refA;
+      const status = label ? "confirmed" : "";
+      return { text, refA, refB, label, status };
+    }
+    // cột 1 = text, cột 2 (nếu có) = nhãn đã gán
+    const text = parts[0];
+    const label = normLabel(parts[1]);
+    const status = label ? "confirmed" : "";   // nhãn có sẵn trong file => coi như đã lưu
+    return { text, label, status };
+  });
+
+  items = built;
+  current = -1; dirty = false;
+  fileName = loadedName;
+  $("fileName").textContent = loadedName;
+
+  // hỏi rõ có khôi phục bản nháp đang làm dở (không tự động) để tránh quên export
+  const draft = loadLocal();
+  const draftCount = Object.keys(draft).length;
+  if(draftCount){
+    const ok = await modalConfirm({
+      icon: "📝",
+      title: "Khôi phục bản nháp?",
+      body: `File này có một bản nháp đang làm dở trong trình duyệt (${draftCount} nhãn, chưa export).\n\n• Khôi phục: dùng lại các nhãn trong bản nháp.\n• Dùng file: chỉ lấy nhãn đã có trong ${loadedName}.`,
+      okText: "Khôi phục bản nháp",
+      cancelText: "Dùng file"
+    });
+    if(ok){
+      for(const it of items){ const d = draft[it.text]; if(!d) continue;
+        let lab = d.label;
+        if(verifyMode && lab && lab!==it.refA && lab!==it.refB) lab = "";  // nháp ngoài 2 lựa chọn -> bỏ
+        if(lab){ it.label = lab; it.status = d.status || "edited"; }
+      }
+      dirty = true;   // bản nháp có thể chứa nhãn chưa export
+      toast("Đã khôi phục bản nháp — nhớ Export khi xong.", "info", 4000);
+    }
+  }
+  $("empty").style.display = "none";
+  $("exportBtn").disabled = false;
+  renderList(); updateCounter();
+  // chọn câu chưa làm đầu tiên (hoặc câu đầu)
+  const firstTodo = items.findIndex(it=>it.status!=="confirmed");
+  select(firstTodo>=0 ? firstTodo : 0);
+
+  toast(`Đã mở <b>${escapeHtml(loadedName)}</b> — ${items.length} câu`, "success", 4000);
+}
+
+/* ---------- sidebar ---------- */
+function renderList(){
+  const html = items.map((it,i)=>{
+    const cls = ["sitem", i===current?"active":""].join(" ");
+    const dot = it.status ? `dot ${it.status}` : "dot";
+    const tag = it.label ? `<span class="tag ${SHORT[it.label]}">${SHORT[it.label]}</span>` : "";
+    return `<div class="${cls}" data-i="${i}"><span class="num">${i+1}</span><span class="${dot}"></span><span class="txt">${escapeHtml(it.text)}</span>${tag}</div>`;
+  }).join("");
+  $("list").innerHTML = html;
+  [...$("list").children].forEach(el=>{
+    el.onclick = ()=> select(+el.dataset.i);
+  });
+  // cuộn để câu đang chọn luôn nằm trong tầm nhìn (hoãn tới sau layout để đúng cả lúc mới mở)
+  const act = $("list").children[current];
+  if(act) requestAnimationFrame(()=> act.scrollIntoView({block:"nearest"}));
+}
+function escapeHtml(s){ return (s||"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function updateCounter(){
+  const conf = items.filter(it=>it.status==="confirmed").length;
+  const edit = items.filter(it=>it.status==="edited").length;
+  const nNeg = items.filter(it=>it.label==="negative").length;
+  const nNeu = items.filter(it=>it.label==="neutral").length;
+  const nPos = items.filter(it=>it.label==="positive").length;
+  const tally = `<span style="color:var(--neg)">neg ${nNeg}</span> · `
+    + `<span style="color:var(--neu)">neu ${nNeu}</span> · `
+    + `<span style="color:var(--pos)">pos ${nPos}</span>`;
+  $("counter").innerHTML = `${tally} &nbsp;|&nbsp; Đã lưu <b>${conf}</b> / ${items.length}`
+    + (edit?` · ✏️ ${edit}`:"");
+  $("saveStatus").innerHTML = dirty
+    ? '<span style="color:#c62828;font-weight:600">⚠ chưa export</span>'
+    : (items.length?'<span style="color:#2e7d32">✓ đã export</span>':"");
+}
+
+/* ---------- chọn câu ---------- */
+function select(i){
+  if(i<0 || i>=items.length) return;
+  current = i;
+  renderList();
+  const it = items[i];
+  $("editor").style.display = "block";
+  $("empty").style.display = "none";
+
+  $("fmeta").textContent = `Câu ${i+1} / ${items.length}`;
+  $("textBox").textContent = it.text;
+  highlightLabel(it.label);
+  updateLabelButtons();
+  updateStatusLabel();
+}
+
+/* ---------- chế độ verify: chỉ cho chọn 1 trong 2 nhãn tham chiếu ---------- */
+function refBadge(lab){
+  if(!lab) return '<span class="hint">—</span>';
+  const c = lab==="negative"?"var(--neg)":lab==="neutral"?"var(--neu)":"var(--pos)";
+  return `<b style="color:${c}">${lab}</b>`;
+}
+function updateLabelButtons(){
+  const it = items[current];
+  const map = {negative:$("bNeg"), neutral:$("bNeu"), positive:$("bPos")};
+  if(verifyMode && it){
+    const cset = new Set([it.refA, it.refB].filter(Boolean));
+    for(const lab in map) map[lab].style.display = cset.has(lab) ? "" : "none";
+    const same = it.refA && it.refB && it.refA===it.refB;
+    $("refRow").style.display = "block";
+    $("refRow").innerHTML = `Nhãn tham chiếu — User 1: ${refBadge(it.refA)} &nbsp;·&nbsp; User 2: ${refBadge(it.refB)}`
+      + (same ? ' &nbsp;<span class="hint">(2 annotator trùng nhau)</span>' : '')
+      + (!it.refA && !it.refB ? ' &nbsp;<span style="color:#c62828">(dòng này thiếu nhãn tham chiếu)</span>' : '');
+  } else {
+    for(const lab in map) map[lab].style.display = "";
+    $("refRow").style.display = "none";
+  }
+}
+
+/* ---------- gán nhãn (chỉ chọn, KHÔNG nhảy câu) ---------- */
+function setLabel(label){
+  if(current<0) return;
+  const it = items[current];
+  if(verifyMode && label!==it.refA && label!==it.refB){ flashStatus("Chỉ được chọn 1 trong 2 nhãn tham chiếu"); return; }
+  it.label = label;
+  it.status = "edited";       // chọn nhãn = đang sửa, phải bấm Lưu mới thành "đã lưu"
+  highlightLabel(label);
+  updateStatusLabel();
+  renderList(); markDirty();
+}
+function saveCurrent(){
+  if(current<0) return;
+  const it = items[current];
+  if(!it.label){ flashStatus("Chưa chọn nhãn"); return; }
+  it.status = "confirmed";
+  updateStatusLabel();
+  renderList(); markDirty();
+  if(current<items.length-1) select(current+1);   // lưu xong nhảy sang câu sau
+}
+function highlightLabel(label){
+  $("bNeg").classList.toggle("sel", label==="negative");
+  $("bNeu").classList.toggle("sel", label==="neutral");
+  $("bPos").classList.toggle("sel", label==="positive");
+}
+function updateStatusLabel(){
+  const it = items[current]; if(!it) return;
+  $("statusLabel").innerHTML = it.status==="confirmed" ? '<span class="ok">✔ đã lưu</span>'
+    : it.status==="edited" ? '<span class="edit">✏️ đã chọn, chưa lưu</span>'
+    : '<span class="hint">chưa làm</span>';
+}
+function flashStatus(msg){ $("statusLabel").innerHTML = '<span style="color:#c62828">'+msg+'</span>'; }
+
+document.querySelectorAll(".labels button").forEach(b=> b.onclick = ()=> setLabel(b.dataset.label));
+$("saveBtn").onclick = saveCurrent;
+$("backBtn").onclick = ()=>{ if(current>0) select(current-1); };
+$("nextBtn").onclick = ()=>{ if(current<items.length-1) select(current+1); };
+
+/* ---------- phím tắt ---------- */
+document.addEventListener("keydown", e=>{
+  if(current<0) return;
+  if(e.key==="1") setLabel("negative");
+  else if(e.key==="2") setLabel("neutral");
+  else if(e.key==="3") setLabel("positive");
+  else if(e.key==="Enter"){ e.preventDefault(); saveCurrent(); }
+  else if(e.key==="j"||e.key==="J"){ if(current<items.length-1) select(current+1); }
+  else if(e.key==="k"||e.key==="K"){ if(current>0) select(current-1); }
+});
+
+/* ---------- autosave trình duyệt + đánh dấu chưa export ---------- */
+function lsKey(){ return "sentiment_label::" + (fileName||"_"); }
+function saveLocal(){
+  const map = {};
+  for(const it of items) if(it.label) map[it.text] = {label:it.label, status:it.status};
+  try{ localStorage.setItem(lsKey(), JSON.stringify(map)); }catch(_){}
+}
+function loadLocal(){
+  try{ return JSON.parse(localStorage.getItem(lsKey())||"{}"); }catch(_){ return {}; }
+}
+function clearLocal(){
+  try{ localStorage.removeItem(lsKey()); }catch(_){}
+}
+let saveTimer=null;
+function markDirty(){ dirty=true; updateCounter(); clearTimeout(saveTimer); saveTimer=setTimeout(saveLocal,300); }
+
+/* ---------- export ---------- */
+$("exportBtn").onclick = ()=>{
+  const out = items.map(it=> verifyMode
+      ? [it.text, it.refA||"", it.refB||"", it.label||""].join(SEP)   // 4 cột: text · user1 · user2 · nhãn mới
+      : (it.label ? it.text+SEP+it.label : it.text)
+    ).join("\n")+"\n";
+  const blob = new Blob([out], {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = OUT_NAME;
+  a.click(); URL.revokeObjectURL(a.href);
+  dirty=false; clearLocal(); updateCounter();   // export xong: xoá nháp, phiên sau bắt đầu sạch
+  const conf = items.filter(it=>it.status==="confirmed").length;
+  toast(`Đã export <b>${OUT_NAME}</b> — ${conf}/${items.length} đã lưu.`, "success");
+};
+
+window.addEventListener("beforeunload", e=>{ if(dirty){ e.preventDefault(); e.returnValue=""; } });
+updateSrcInfo();   // hiển thị trạng thái "chưa chọn" ngay từ đầu
+updateEmptyHelp();
+</script>
+</body>
+</html>

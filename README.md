@@ -1,6 +1,6 @@
 # NLP Annotation Tools
 
-Two lightweight, self-contained browser-based tools for annotating NLP and speech datasets. No installation, no server, no dependencies — just open the HTML file in any modern browser.
+Three lightweight, self-contained browser-based tools for annotating NLP and speech datasets. No installation, no server, no dependencies — just open the HTML file in any modern browser.
 
 ---
 
@@ -125,13 +125,71 @@ audio_003.wav	positive	positive
 
 ---
 
+### `sentiment.html` — Text Sentiment Annotation
+
+Read text sentences one at a time and label each with one of three classes: **negative**, **neutral**, or **positive**. This is the text counterpart of `ser.html` — instead of listening to a `.wav`, you read the sentence shown on screen.
+
+#### Data Format
+
+The input file is a plain `.txt` with **one sentence per line**. Labels are optional (useful for resuming):
+
+```
+Sản phẩm này dùng rất tốt, tôi rất hài lòng.	positive
+Giao hàng hơi chậm so với dự kiến.
+Chất lượng bình thường, không có gì đặc biệt.	neutral
+```
+
+Columns are tab-separated, so sentences must not contain tab characters. Exported as `sentiment_output.txt` using the same format.
+
+#### How to Use
+
+1. Click **📄 List file (.txt)** and select your text file (can be a previously exported `sentiment_output.txt`).
+2. If a browser draft exists for this file, you will be asked whether to restore it.
+3. The tool opens the first unlabeled sentence automatically.
+4. Read the sentence, then click **Negative / Neutral / Positive** (or press `1` / `2` / `3`).
+5. Press **Enter** or click **💾 Save** to confirm and advance to the next sentence.
+6. Click **💾 Export sentiment_output.txt** to download the labeled file.
+
+#### Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `1` | Label: Negative |
+| `2` | Label: Neutral |
+| `3` | Label: Positive |
+| `Enter` | Save current label and advance |
+| `J` / `K` | Next / previous sentence |
+
+#### Auto-save
+
+Labels are continuously saved to `localStorage` (keyed by file name). Exporting clears the draft.
+
+#### Verify Mode
+
+Tick the **✅ Verify task** checkbox to switch to adjudication mode. The input file is **3 columns** (tab-separated) — sentence, user-1 label, user-2 label — and you pick one of the two:
+
+```
+Sản phẩm này dùng rất tốt.	positive	neutral
+Giao hàng quá chậm.	negative	neutral
+Đóng gói đẹp, sẽ mua lại.	positive	positive
+```
+
+- Only the two reference labels are offered as choices for each sentence — you select one of them.
+- Rows where both annotators **agree** are auto-confirmed with that label; no action needed.
+- Export adds a **4th column** with the chosen label: `sentence	user1	user2	final`.
+- On reload, a row is treated as done when its 4th column has a value.
+- The tool detects a column-count mismatch between the checkbox state and the file, and offers to switch to the correct mode.
+
+---
+
 ## Running
 
-No setup required. Open either file directly in a browser:
+No setup required. Open any file directly in a browser:
 
 ```bash
 open aste.html
 open ser.html
+open sentiment.html
 ```
 
 Works fully offline. Tested in Chrome and Firefox.
