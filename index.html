@@ -127,6 +127,7 @@ nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   position: relative;
   padding: 0 24px 22px;
   overflow-x: auto;
+  min-height: 170px;
 }
 
 #demoSvg {
@@ -181,6 +182,50 @@ nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   margin-right: 4px;
   border: 1px solid transparent;
 }
+
+/* ── Demo panels (rotating showcase) ─────────── */
+.demo-panel { display: none; }
+.demo-panel.active { display: block; }
+
+.demo-cap {
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  padding-top: 16px;
+  margin-bottom: 6px;
+}
+
+.ser-stage { position: relative; margin: 4px 0 2px; }
+#serWave { display: block; width: 100%; height: 66px; }
+.demo-cursor {
+  position: absolute; top: 0; height: 66px; width: 2px;
+  background: var(--accent); left: 0; opacity: 0;
+  pointer-events: none;
+}
+
+.demo-sentence {
+  text-align: center;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--text);
+  padding: 36px 16px 8px;
+}
+
+.demo-labels {
+  display: flex; gap: 8px; justify-content: center;
+  flex-wrap: wrap; margin-top: 16px;
+}
+.demo-lab {
+  font-size: 13px; font-weight: 700;
+  padding: 7px 16px; border-radius: 6px;
+  border: 1.5px solid var(--border);
+  color: var(--muted); background: #fff;
+  transition: background 0.3s, border-color 0.3s, color 0.3s;
+}
+.demo-lab[data-k="neg"].sel { background:#ffcdd2; border-color:var(--neg); color:var(--neg); }
+.demo-lab[data-k="neu"].sel { background:#e3f2fd; border-color:var(--neu); color:var(--neu); }
+.demo-lab[data-k="pos"].sel { background:#c8e6c9; border-color:var(--pos); color:var(--pos); }
 
 /* ── Tool cards ──────────────────────────────── */
 .tools {
@@ -275,10 +320,11 @@ footer {
   .hero  { padding: 48px 16px 36px; }
   .tools { grid-template-columns: 1fr; padding: 0 16px 48px; }
   .dtok  { font-size: 13px; padding: 4px 7px; }
+  .demo-sentence { font-size: 15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .dtok, .tool-card, nav a, .tc-arrow { transition: none; }
+  .dtok, .tool-card, nav a, .tc-arrow, .demo-lab, .demo-cursor { transition: none; }
 }
 </style>
 </head>
@@ -303,25 +349,42 @@ footer {
         <div class="demo-dot"></div>
         <div class="demo-dot"></div>
         <div class="demo-dot"></div>
-        <span class="demo-label">aste.html</span>
+        <span class="demo-label" id="demoLabel">aste.html</span>
       </div>
       <div class="demo-canvas">
-        <svg id="demoSvg" aria-hidden="true"></svg>
-        <div id="demoTokens" role="img" aria-label="Demo gán nhãn ASTE"></div>
+        <!-- ASTE -->
+        <div class="demo-panel active" id="panelAste">
+          <svg id="demoSvg" aria-hidden="true"></svg>
+          <div id="demoTokens" role="img" aria-label="Demo gán nhãn ASTE"></div>
+        </div>
+        <!-- SER -->
+        <div class="demo-panel" id="panelSer">
+          <div class="demo-cap">audio_042.wav</div>
+          <div class="ser-stage">
+            <canvas id="serWave"></canvas>
+            <div class="demo-cursor" id="serCursor"></div>
+          </div>
+          <div class="demo-labels" id="serLabels">
+            <span class="demo-lab" data-k="neg">Negative</span>
+            <span class="demo-lab" data-k="neu">Neutral</span>
+            <span class="demo-lab" data-k="pos">Positive</span>
+          </div>
+        </div>
+        <!-- Sentiment -->
+        <div class="demo-panel" id="panelSent">
+          <div class="demo-sentence">"Sản phẩm giao quá chậm, tôi rất thất vọng."</div>
+          <div class="demo-labels" id="sentLabels">
+            <span class="demo-lab" data-k="neg">Negative</span>
+            <span class="demo-lab" data-k="neu">Neutral</span>
+            <span class="demo-lab" data-k="pos">Positive</span>
+          </div>
+        </div>
       </div>
-      <div class="demo-legend">
-        <span>
-          <i class="leg-swatch" style="background:var(--tgt-bg);border-color:var(--accent)"></i>Target
-        </span>
-        <span>
-          <i class="leg-swatch" style="background:var(--opi-bg);border-color:var(--accent2)"></i>Opinion
-        </span>
-        <span>
-          <i class="leg-swatch" style="background:#c8e6c9;border-color:var(--pos)"></i>POS
-        </span>
-        <span>
-          <i class="leg-swatch" style="background:#ffcdd2;border-color:var(--neg)"></i>NEG
-        </span>
+      <div class="demo-legend" id="demoLegend">
+        <span><i class="leg-swatch" style="background:var(--tgt-bg);border-color:var(--accent)"></i>Target</span>
+        <span><i class="leg-swatch" style="background:var(--opi-bg);border-color:var(--accent2)"></i>Opinion</span>
+        <span><i class="leg-swatch" style="background:#c8e6c9;border-color:var(--pos)"></i>POS</span>
+        <span><i class="leg-swatch" style="background:#ffcdd2;border-color:var(--neg)"></i>NEG</span>
       </div>
     </div>
   </section>
@@ -372,6 +435,38 @@ footer {
 <script>
 "use strict";
 
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const elLabel  = document.getElementById('demoLabel');
+const elLegend = document.getElementById('demoLegend');
+const panels = {
+  aste: document.getElementById('panelAste'),
+  ser:  document.getElementById('panelSer'),
+  sent: document.getElementById('panelSent'),
+};
+function showPanel(name) {
+  for (const k in panels) panels[k].classList.toggle('active', k === name);
+}
+
+const LEG_ASTE = `
+  <span><i class="leg-swatch" style="background:var(--tgt-bg);border-color:var(--accent)"></i>Target</span>
+  <span><i class="leg-swatch" style="background:var(--opi-bg);border-color:var(--accent2)"></i>Opinion</span>
+  <span><i class="leg-swatch" style="background:#c8e6c9;border-color:var(--pos)"></i>POS</span>
+  <span><i class="leg-swatch" style="background:#ffcdd2;border-color:var(--neg)"></i>NEG</span>`;
+const LEG_EMO = `
+  <span><i class="leg-swatch" style="background:#ffcdd2;border-color:var(--neg)"></i>Negative</span>
+  <span><i class="leg-swatch" style="background:#e3f2fd;border-color:var(--neu)"></i>Neutral</span>
+  <span><i class="leg-swatch" style="background:#c8e6c9;border-color:var(--pos)"></i>Positive</span>`;
+
+function pickLab(container, k) {
+  container.querySelectorAll('.demo-lab').forEach(el => el.classList.toggle('sel', el.dataset.k === k));
+}
+function clearLabs(container) {
+  container.querySelectorAll('.demo-lab').forEach(el => el.classList.remove('sel'));
+}
+
+/* ════════════ ASTE demo ════════════ */
 const TOKENS = [
   {w:'Dịch',   role:'tgt', g:1},
   {w:'vụ',     role:'tgt', g:1},
@@ -382,13 +477,12 @@ const TOKENS = [
   {w:'quá',    role:'opi', g:2},
   {w:'cao',    role:'opi', g:2},
 ];
-
 const ARCS = [
   {g:1, label:'POS', color:'#2e7d32'},
   {g:2, label:'NEG', color:'#c62828'},
 ];
 
-const wrap = document.getElementById('demoSvg').closest('.demo-canvas');
+const wrap = document.querySelector('.demo-canvas');
 const svg  = document.getElementById('demoSvg');
 const row  = document.getElementById('demoTokens');
 
@@ -401,19 +495,13 @@ TOKENS.forEach(t => {
 
 const tokEls = () => [...row.querySelectorAll('.dtok')];
 
-function ns(tag) {
-  return document.createElementNS('http://www.w3.org/2000/svg', tag);
-}
-
+function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
 function cx(el) {
-  const wr = wrap.getBoundingClientRect();
-  const er = el.getBoundingClientRect();
+  const wr = wrap.getBoundingClientRect(), er = el.getBoundingClientRect();
   return er.left + er.width / 2 - wr.left;
 }
-
 function topY(el) {
-  const wr = wrap.getBoundingClientRect();
-  const er = el.getBoundingClientRect();
+  const wr = wrap.getBoundingClientRect(), er = el.getBoundingClientRect();
   return er.top - wr.top;
 }
 
@@ -421,7 +509,6 @@ function renderArcs(groups, animated) {
   svg.innerHTML = '';
   const defs = ns('defs');
   svg.appendChild(defs);
-
   const els = tokEls();
 
   groups.forEach(arc => {
@@ -435,7 +522,6 @@ function renderArcs(groups, animated) {
     const h  = Math.max(36, Math.abs(x2 - x1) * 0.52);
     const d  = `M ${x1} ${y} C ${x1} ${y-h} ${x2} ${y-h} ${x2} ${y}`;
 
-    // Arrowhead marker
     const mid = `ah${arc.g}`;
     const marker = ns('marker');
     marker.setAttribute('id', mid);
@@ -450,7 +536,6 @@ function renderArcs(groups, animated) {
     marker.appendChild(mp);
     defs.appendChild(marker);
 
-    // Arc path
     const path = ns('path');
     path.setAttribute('d', d);
     path.setAttribute('fill', 'none');
@@ -463,7 +548,6 @@ function renderArcs(groups, animated) {
       path.style.transition = 'stroke-dashoffset 0.55s ease';
     }
 
-    // Label rect + text
     const lx = (x1 + x2) / 2;
     const ly = y - h * 0.78;
 
@@ -499,55 +583,114 @@ function renderArcs(groups, animated) {
   });
 }
 
-// Animation sequence
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-const SEQ = [
-  { t: 500,  fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===1 && TOKENS[i].role==='tgt') el.classList.add('hi-tgt'); }); }},
-  { t: 1050, fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===1 && TOKENS[i].role==='opi') el.classList.add('hi-opi'); }); }},
-  { t: 1600, fn() { renderArcs([ARCS[0]], true); }},
-  { t: 2450, fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===2 && TOKENS[i].role==='tgt') el.classList.add('hi-tgt'); }); }},
-  { t: 3000, fn() { tokEls().forEach((el,i) => { if(TOKENS[i].g===2 && TOKENS[i].role==='opi') el.classList.add('hi-opi'); }); }},
-  { t: 3550, fn() { renderArcs(ARCS, true); }},
-  { t: 6200, fn() { reset(); }},
-];
-
-let timers = [];
-
-function reset() {
+async function runAste() {
   tokEls().forEach(el => { el.className = 'dtok'; });
   svg.innerHTML = '';
-  timers.push(setTimeout(run, 700));
-}
-
-function run() {
-  timers.forEach(clearTimeout); timers = [];
   if (reducedMotion) {
-    // Show final state immediately without animation
     tokEls().forEach((el,i) => {
       if (TOKENS[i].role === 'tgt') el.classList.add('hi-tgt');
       if (TOKENS[i].role === 'opi') el.classList.add('hi-opi');
     });
     renderArcs(ARCS, false);
+    await sleep(3400);
     return;
   }
-  SEQ.forEach(s => timers.push(setTimeout(s.fn, s.t)));
+  await sleep(450);
+  tokEls().forEach((el,i) => { if (TOKENS[i].g===1 && TOKENS[i].role==='tgt') el.classList.add('hi-tgt'); });
+  await sleep(550);
+  tokEls().forEach((el,i) => { if (TOKENS[i].g===1 && TOKENS[i].role==='opi') el.classList.add('hi-opi'); });
+  await sleep(520); renderArcs([ARCS[0]], true);
+  await sleep(880);
+  tokEls().forEach((el,i) => { if (TOKENS[i].g===2 && TOKENS[i].role==='tgt') el.classList.add('hi-tgt'); });
+  await sleep(550);
+  tokEls().forEach((el,i) => { if (TOKENS[i].g===2 && TOKENS[i].role==='opi') el.classList.add('hi-opi'); });
+  await sleep(520); renderArcs(ARCS, true);
+  await sleep(2000);
 }
 
-// Resize: redraw visible arcs
-let rsz;
+/* ════════════ SER demo ════════════ */
+const serWave = document.getElementById('serWave');
+const serCursor = document.getElementById('serCursor');
+const serLabels = document.getElementById('serLabels');
+
+function drawSerWave() {
+  const r = serWave.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const W = Math.max(280, r.width) * dpr, H = 66 * dpr;
+  serWave.width = W; serWave.height = H;
+  const ctx = serWave.getContext('2d');
+  ctx.clearRect(0, 0, W, H);
+  const mid = H / 2, bw = 2 * dpr, gap = dpr, step = bw + gap;
+  const bars = Math.floor(W / step);
+  ctx.fillStyle = '#9bb8e8';
+  for (let i = 0; i < bars; i++) {
+    // bao hình tất định: âm lượng lên xuống mượt, không cần random
+    const env = Math.abs(Math.sin(i * 0.19)) * (0.32 + 0.68 * Math.abs(Math.sin(i * 0.041 + 0.6)));
+    const h = Math.max(bw, env * mid * 0.92);
+    ctx.fillRect(i * step, mid - h, bw, h * 2);
+  }
+  ctx.strokeStyle = '#cfd8e6';
+  ctx.beginPath(); ctx.moveTo(0, mid); ctx.lineTo(W, mid); ctx.stroke();
+}
+
+async function runSer() {
+  clearLabs(serLabels);
+  drawSerWave();
+  serCursor.style.transition = 'none';
+  serCursor.style.left = '0%';
+  serCursor.style.opacity = '0';
+  if (reducedMotion) { pickLab(serLabels, 'pos'); await sleep(3400); return; }
+  await sleep(350);
+  serCursor.style.opacity = '1';
+  serCursor.getBoundingClientRect();   // reflow để transition chạy
+  serCursor.style.transition = 'left 1.7s linear';
+  serCursor.style.left = '100%';
+  await sleep(1750);
+  pickLab(serLabels, 'pos');
+  await sleep(320);
+  serCursor.style.opacity = '0';
+  await sleep(1650);
+}
+
+/* ════════════ Sentiment demo ════════════ */
+const sentLabels = document.getElementById('sentLabels');
+
+async function runSent() {
+  clearLabs(sentLabels);
+  if (reducedMotion) { pickLab(sentLabels, 'neg'); await sleep(3400); return; }
+  await sleep(950);
+  pickLab(sentLabels, 'neg');
+  await sleep(2300);
+}
+
+/* ════════════ vòng lặp xoay 3 tool ════════════ */
+let rszTimer;
 window.addEventListener('resize', () => {
-  clearTimeout(rsz);
-  rsz = setTimeout(() => {
-    const els = tokEls();
-    const visible = ARCS.filter(a =>
-      TOKENS.some((t,i) => t.g===a.g && t.role==='opi' && els[i].classList.contains('hi-opi'))
-    );
-    if (visible.length) renderArcs(visible, false);
-  }, 80);
+  clearTimeout(rszTimer);
+  rszTimer = setTimeout(() => {
+    if (panels.aste.classList.contains('active')) {
+      const els = tokEls();
+      const vis = ARCS.filter(a =>
+        TOKENS.some((t,i) => t.g===a.g && t.role==='opi' && els[i].classList.contains('hi-opi')));
+      if (vis.length) renderArcs(vis, false);
+    } else if (panels.ser.classList.contains('active')) {
+      drawSerWave();
+    }
+  }, 90);
 });
 
-setTimeout(run, 300);
+async function loop() {
+  while (true) {
+    elLabel.textContent = 'aste.html'; elLegend.innerHTML = LEG_ASTE; showPanel('aste');
+    await runAste();
+    elLabel.textContent = 'ser.html'; elLegend.innerHTML = LEG_EMO; showPanel('ser');
+    await runSer();
+    elLabel.textContent = 'sentiment.html'; elLegend.innerHTML = LEG_EMO; showPanel('sent');
+    await runSent();
+  }
+}
+
+setTimeout(loop, 300);
 </script>
 
 </body>
