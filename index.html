@@ -18,6 +18,9 @@
   --opi-bg:   #ffe0b2;
   --border:   #d0d4da;
   --card:     #ffffff;
+  --ner-person:   #1565c0; --ner-person-bg:  #bbdefb;
+  --ner-address:  #2e7d32; --ner-address-bg: #c8e6c9;
+  --ner-account:  #6a1b9a; --ner-account-bg: #e1bee7;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -162,6 +165,29 @@ nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .dtok.hi-tgt { background: var(--tgt-bg); border-color: var(--accent); }
 .dtok.hi-opi { background: var(--opi-bg); border-color: var(--accent2); }
+.dtok.hi-person  { background: var(--ner-person-bg);  border-color: var(--ner-person); }
+.dtok.hi-address { background: var(--ner-address-bg); border-color: var(--ner-address); }
+.dtok.hi-account { background: var(--ner-account-bg); border-color: var(--ner-account); }
+
+/* ── NER demo panel ─────────────────────────── */
+#panelNer { position: relative; }
+#nerBadges { position: absolute; inset: 0; pointer-events: none; }
+#nerTokens {
+  display: flex; flex-wrap: nowrap; gap: 2px;
+  align-items: center; justify-content: center;
+  padding-top: 40px; padding-bottom: 36px;
+  min-width: max-content; margin: 0 auto;
+}
+.ner-badge {
+  position: absolute; transform: translateX(-50%);
+  font-size: 9px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 1px 5px; border-radius: 3px; color: #fff;
+  white-space: nowrap; opacity: 0; transition: opacity 0.3s;
+  font-family: ui-monospace, monospace;
+}
+.ner-badge.person  { background: var(--ner-person); }
+.ner-badge.address { background: var(--ner-address); }
+.ner-badge.account { background: var(--ner-account); }
 
 .demo-legend {
   display: flex;
@@ -291,6 +317,9 @@ nav a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tag-pos { background: #c8e6c9;        color: var(--pos); }
 .tag-neg { background: #ffcdd2;        color: var(--neg); }
 .tag-neu { background: #e3f2fd;        color: var(--neu); }
+.tag-address { background: var(--ner-address-bg); color: var(--ner-address); }
+.tag-person  { background: var(--ner-person-bg);  color: var(--ner-person); }
+.tag-account { background: var(--ner-account-bg); color: var(--ner-account); }
 
 .tc-cta {
   display: flex;
@@ -334,6 +363,7 @@ footer {
   <span class="logo">🏷️ Công cụ Gán nhãn NLP</span>
   <nav>
     <a href="aste.html">ASTE</a>
+    <a href="ner.html">NER</a>
     <a href="ser.html">SER</a>
     <a href="sentiment.html">Sentiment</a>
   </nav>
@@ -356,6 +386,11 @@ footer {
         <div class="demo-panel active" id="panelAste">
           <svg id="demoSvg" aria-hidden="true"></svg>
           <div id="demoTokens" role="img" aria-label="Demo gán nhãn ASTE"></div>
+        </div>
+        <!-- NER -->
+        <div class="demo-panel" id="panelNer">
+          <div id="nerBadges"></div>
+          <div id="nerTokens" role="img" aria-label="Demo gán nhãn NER"></div>
         </div>
         <!-- SER -->
         <div class="demo-panel" id="panelSer">
@@ -404,6 +439,18 @@ footer {
       <div class="tc-cta">Mở tool <span class="tc-arrow">→</span></div>
     </a>
 
+    <a class="tool-card" href="ner.html">
+      <div class="tc-icon">🔖</div>
+      <div class="tc-name">Gán nhãn NER</div>
+      <div class="tc-desc">Gán nhãn thực thể (named entity) cho câu văn bản. Bôi đen cụm từ rồi chọn một trong ba nhãn cố định.</div>
+      <div class="tc-tags">
+        <span class="tag tag-address">ADDRESS</span>
+        <span class="tag tag-person">PERSON</span>
+        <span class="tag tag-account">ACCOUNT</span>
+      </div>
+      <div class="tc-cta">Mở tool <span class="tc-arrow">→</span></div>
+    </a>
+
     <a class="tool-card" href="ser.html">
       <div class="tc-icon">🎙️</div>
       <div class="tc-name">Gán nhãn SER</div>
@@ -442,6 +489,7 @@ const elLabel  = document.getElementById('demoLabel');
 const elLegend = document.getElementById('demoLegend');
 const panels = {
   aste: document.getElementById('panelAste'),
+  ner:  document.getElementById('panelNer'),
   ser:  document.getElementById('panelSer'),
   sent: document.getElementById('panelSent'),
 };
@@ -458,6 +506,10 @@ const LEG_EMO = `
   <span><i class="leg-swatch" style="background:#ffcdd2;border-color:var(--neg)"></i>Negative</span>
   <span><i class="leg-swatch" style="background:#e3f2fd;border-color:var(--neu)"></i>Neutral</span>
   <span><i class="leg-swatch" style="background:#c8e6c9;border-color:var(--pos)"></i>Positive</span>`;
+const LEG_NER = `
+  <span><i class="leg-swatch" style="background:var(--ner-address-bg);border-color:var(--ner-address)"></i>ADDRESS</span>
+  <span><i class="leg-swatch" style="background:var(--ner-person-bg);border-color:var(--ner-person)"></i>PERSON</span>
+  <span><i class="leg-swatch" style="background:var(--ner-account-bg);border-color:var(--ner-account)"></i>ACCOUNT</span>`;
 
 function pickLab(container, k) {
   container.querySelectorAll('.demo-lab').forEach(el => el.classList.toggle('sel', el.dataset.k === k));
@@ -663,6 +715,59 @@ async function runSent() {
   await sleep(2300);
 }
 
+/* ════════════ NER demo ════════════ */
+const nerRow = document.getElementById('nerTokens');
+const nerBadges = document.getElementById('nerBadges');
+const NER_TOKENS = [
+  {w:'Nguyễn', e:'person'}, {w:'Văn', e:'person'}, {w:'An', e:'person'},
+  {w:'sống', e:null}, {w:'ở', e:null},
+  {w:'Hà', e:'address'}, {w:'Nội', e:'address'},
+  {w:'tài', e:null}, {w:'khoản', e:null}, {w:'0123456789', e:'account'},
+];
+const NER_SPANS = [
+  {e:'person',  label:'PERSON',  from:0, to:2},
+  {e:'address', label:'ADDRESS', from:5, to:6},
+  {e:'account', label:'ACCOUNT', from:9, to:9},
+];
+NER_TOKENS.forEach(t => {
+  const el = document.createElement('span');
+  el.className = 'dtok';
+  el.textContent = t.w;
+  nerRow.appendChild(el);
+});
+const nerTokEls = () => [...nerRow.querySelectorAll('.dtok')];
+
+function addNerBadge(sp, els, animated) {
+  const panel = panels.ner.getBoundingClientRect();
+  const a = els[sp.from].getBoundingClientRect(), b = els[sp.to].getBoundingClientRect();
+  const badge = document.createElement('span');
+  badge.className = 'ner-badge ' + sp.e;
+  badge.textContent = sp.label;
+  badge.style.left = ((a.left + b.right) / 2 - panel.left) + 'px';
+  badge.style.top  = (b.bottom - panel.top + 4) + 'px';
+  nerBadges.appendChild(badge);
+  if (animated) requestAnimationFrame(() => requestAnimationFrame(() => { badge.style.opacity = '1'; }));
+  else badge.style.opacity = '1';
+}
+
+async function runNer() {
+  const els = nerTokEls();
+  els.forEach(el => { el.className = 'dtok'; });
+  nerBadges.innerHTML = '';
+  if (reducedMotion) {
+    NER_SPANS.forEach(sp => { for (let i=sp.from;i<=sp.to;i++) els[i].classList.add('hi-'+sp.e); addNerBadge(sp, els, false); });
+    await sleep(3400);
+    return;
+  }
+  await sleep(450);
+  for (const sp of NER_SPANS) {
+    for (let i=sp.from;i<=sp.to;i++) els[i].classList.add('hi-'+sp.e);
+    addNerBadge(sp, els, true);
+    await sleep(760);
+  }
+  await sleep(1700);
+}
+
 /* ════════════ vòng lặp xoay 3 tool ════════════ */
 let rszTimer;
 window.addEventListener('resize', () => {
@@ -673,6 +778,10 @@ window.addEventListener('resize', () => {
       const vis = ARCS.filter(a =>
         TOKENS.some((t,i) => t.g===a.g && t.role==='opi' && els[i].classList.contains('hi-opi')));
       if (vis.length) renderArcs(vis, false);
+    } else if (panels.ner.classList.contains('active')) {
+      const els = nerTokEls();
+      nerBadges.innerHTML = '';
+      NER_SPANS.forEach(sp => { if (els[sp.from].classList.contains('hi-'+sp.e)) addNerBadge(sp, els, false); });
     } else if (panels.ser.classList.contains('active')) {
       drawSerWave();
     }
@@ -683,6 +792,8 @@ async function loop() {
   while (true) {
     elLabel.textContent = 'aste.html'; elLegend.innerHTML = LEG_ASTE; showPanel('aste');
     await runAste();
+    elLabel.textContent = 'ner.html'; elLegend.innerHTML = LEG_NER; showPanel('ner');
+    await runNer();
     elLabel.textContent = 'ser.html'; elLegend.innerHTML = LEG_EMO; showPanel('ser');
     await runSer();
     elLabel.textContent = 'sentiment.html'; elLegend.innerHTML = LEG_EMO; showPanel('sent');

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Three standalone, single-file HTML annotation tools for NLP/speech data labeling. No build system, no dependencies, no server — open directly in a browser. `index.html` is a landing page linking to all three.
+Four standalone, single-file HTML annotation tools for NLP/speech data labeling. No build system, no dependencies, no server — open directly in a browser. `index.html` is a landing page linking to all four.
 
 ## Tools
 
@@ -14,7 +14,7 @@ Labels text sentences with (target span, opinion span, sentiment) triplets.
 
 **Input/output format** (one sentence per line):
 ```
-token1 token2 ... #### #### #### [([target_indices], [opinion_indices], 'SENTIMENT')]
+token1 token2 ...#### #### ####[([target_indices], [opinion_indices], 'SENTIMENT')]
 ```
 - Separator is the literal string `#### #### ####`
 - Token indices are 0-based positions after space-splitting
@@ -26,6 +26,24 @@ token1 token2 ... #### #### #### [([target_indices], [opinion_indices], 'SENTIME
 - Drag from a TARGET span to an OPINION span → creates a relation arc with sentiment
 - Click a span/arc → inspect/edit/delete in the right panel
 - State autosaves to `localStorage` key `aste_label_state_v1`
+
+### `ner.html` — NER (Named Entity Recognition) Annotation
+
+The span-only counterpart of `aste.html`: labels text sentences with entity spans, no relations. Fixed labels: `ADDRESS`, `PERSON`, `ACCOUNT`.
+
+**Input/output format** (one sentence per line):
+```
+token1 token2 ...#### #### ####[([token_indices], 'LABEL')]
+```
+- Same separator and 0-based token indexing as ASTE
+- Each entity is `([indices], 'LABEL')`; labels: `ADDRESS`, `PERSON`, `ACCOUNT`
+- Export appends a tab + status column (`edited` / `confirmed`)
+
+**Interaction model:**
+- Highlight tokens → popup to pick one of the three labels (or press `1`/`2`/`3` while a range is selected; `Esc` clears it)
+- Entities may not overlap — an overlapping selection is rejected
+- Click an entity → change label / delete in the right panel
+- State autosaves to `localStorage` key `ner_label_state_v1`
 
 ### `ser.html` — SER (Speech Emotion Recognition) Annotation
 

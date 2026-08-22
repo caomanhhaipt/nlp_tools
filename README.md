@@ -1,6 +1,6 @@
 # NLP Annotation Tools
 
-Three lightweight, self-contained browser-based tools for annotating NLP and speech datasets. No installation, no server, no dependencies — just open the HTML file in any modern browser.
+Four lightweight, self-contained browser-based tools for annotating NLP and speech datasets. No installation, no server, no dependencies — just open the HTML file in any modern browser.
 
 ---
 
@@ -53,6 +53,55 @@ Exported files include an extra tab-separated status column (`edited` / `confirm
 #### Auto-save
 
 Work in progress is automatically saved to `localStorage` and can be restored on next open. Exporting clears the draft.
+
+---
+
+### `ner.html` — Named Entity Recognition (NER)
+
+Annotate text sentences with entity spans, each assigned one of three fixed labels: **ADDRESS**, **PERSON**, or **ACCOUNT**. Works like the ASTE tool, minus the relation arcs.
+
+#### Data Format
+
+Each line in the input `.txt` file follows this structure:
+
+```
+token1 token2 ...#### #### ####[([token_indices], 'LABEL')]
+```
+
+- Tokens are separated by spaces; the separator `#### #### ####` divides the sentence from its annotations.
+- Token indices are **0-based**; multiple entities per sentence are comma-separated inside `[...]`.
+- Labels: `ADDRESS`, `PERSON`, `ACCOUNT`.
+
+**Example:**
+```
+Nguyễn Văn An sống ở Hà Nội số tài khoản 0123456789#### #### ####[([0, 1, 2], 'PERSON'), ([5, 6], 'ADDRESS'), ([9], 'ACCOUNT')]
+```
+
+Exported files include an extra tab-separated status column (`edited` / `confirmed`) so you can resume where you left off.
+
+#### How to Use
+
+1. Click **📂 Import .txt** to load your annotation file.
+2. Select a sentence from the left sidebar.
+3. **Highlight** a range of tokens → a popup asks for the label (ADDRESS / PERSON / ACCOUNT).
+4. **Click** any entity to change its label or delete it in the right panel.
+5. Click **✔ Confirm & next** (or press `Enter`) to mark a sentence done and advance.
+6. Click **💾 Export .txt** regularly to save your work.
+
+Entities may not overlap — the tool rejects a selection that covers an existing entity.
+
+#### Keyboard Shortcuts
+
+| Key | Action |
+|---|---|
+| `←` / `→` | Previous / next sentence |
+| `1` / `2` / `3` | Assign ADDRESS / PERSON / ACCOUNT to the current selection |
+| `Esc` | Clear the current selection |
+| `Enter` | Confirm current sentence and advance |
+
+#### Auto-save
+
+Work in progress is automatically saved to `localStorage` (key `ner_label_state_v1`, separate from the other tools) and can be restored on next open. Exporting clears the draft.
 
 ---
 
