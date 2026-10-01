@@ -136,10 +136,11 @@
           <span class="spacer"></span>
           <button class="primary" id="saveBtn">💾 Lưu <kbd>Enter</kbd></button>
           <span class="spacer"></span>
+          <button id="todoBtn" title="Nhảy tới câu chưa làm kế tiếp (N)">⏭ Chưa làm <kbd>N</kbd></button>
           <button id="nextBtn">Sau ▶</button>
         </div>
         <div class="hint" id="statusLabel" style="text-align:center"></div>
-        <div class="hint">Phím tắt: <kbd>Space</kbd> phát/dừng · <kbd>R</kbd> phát lại từ đầu · <kbd>1/2/3</kbd> gán nhãn · <kbd>Enter</kbd> lưu · <kbd>J</kbd>/<kbd>K</kbd> file sau/trước · click vào waveform để phát từ điểm đó.</div>
+        <div class="hint">Phím tắt: <kbd>Space</kbd> phát/dừng · <kbd>R</kbd> phát lại từ đầu · <kbd>1/2/3</kbd> gán nhãn · <kbd>Enter</kbd> lưu · <kbd>J</kbd>/<kbd>K</kbd> file sau/trước · <kbd>N</kbd> câu chưa làm kế tiếp · click vào waveform để phát từ điểm đó.</div>
       </div>
     </div>
   </div>
@@ -594,6 +595,16 @@ document.querySelectorAll(".labels button").forEach(b=> b.onclick = ()=> setLabe
 $("saveBtn").onclick = saveCurrent;
 $("backBtn").onclick = ()=>{ if(current>0) select(current-1); };
 $("nextBtn").onclick = ()=>{ if(current<items.length-1) select(current+1); };
+// nhảy tới câu chưa làm (chưa confirmed) kế tiếp; verify mode: câu đang đợi chọn nhãn. Quay vòng từ đầu nếu hết.
+function nextTodo(){
+  if(!items.length) return;
+  for(let k=1;k<=items.length;k++){
+    const i=(current+k)%items.length; const it=items[i];
+    if(it.file && it.status!=="confirmed"){ select(i); return; }
+  }
+  toast("Không còn câu nào chưa làm — tất cả đã lưu.", "success", 3000);
+}
+$("todoBtn").onclick = nextTodo;
 
 /* ---------- phím tắt ---------- */
 document.addEventListener("keydown", e=>{
@@ -604,6 +615,7 @@ document.addEventListener("keydown", e=>{
   else if(e.key==="2") setLabel("neutral");
   else if(e.key==="3") setLabel("positive");
   else if(e.key==="Enter"){ e.preventDefault(); saveCurrent(); }
+  else if(e.key==="n"||e.key==="N"){ nextTodo(); }
   else if(e.key==="j"||e.key==="J"){ if(current<items.length-1) select(current+1); }
   else if(e.key==="k"||e.key==="K"){ if(current>0) select(current-1); }
 });

@@ -129,7 +129,8 @@ Exported as `ser_output.txt` using the same format (tab-separated filename and l
 4. The tool opens the first unlabeled file automatically.
 5. Listen to the audio, then click **Negative / Neutral / Positive** (or press `1` / `2` / `3`).
 6. Press **Enter** or click **💾 Save** to confirm and advance to the next file.
-7. Click **💾 Export ser_output.txt** to download the labeled file.
+7. Use **⏭ Chưa làm** (or press `N`) to jump to the next file that still needs work — unlabeled, or in verify mode still awaiting a choice. It skips confirmed files and wraps around to the start.
+8. Click **💾 Export ser_output.txt** to download the labeled file.
 
 #### Keyboard Shortcuts
 
@@ -142,6 +143,7 @@ Exported as `ser_output.txt` using the same format (tab-separated filename and l
 | `3` | Label: Positive |
 | `Enter` | Save current label and advance |
 | `J` / `K` | Next / previous file |
+| `N` | Jump to the next unfinished file (unlabeled / awaiting verify) |
 
 #### Audio Features
 

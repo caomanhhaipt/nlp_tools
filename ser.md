@@ -87,6 +87,8 @@ Sau khi load xong, tool tự mở file **đầu tiên chưa làm**. Giao diện 
 2. Nhấn **Negative** / **Neutral** / **Positive** (hoặc phím `1` / `2` / `3`).
 3. Nhấn **💾 Lưu** (hoặc `Enter`) → tool lưu và chuyển sang file tiếp theo.
 
+> **Nhảy nhanh tới câu chưa làm:** nhấn **⏭ Chưa làm** (hoặc phím `N`) để bỏ qua các câu đã lưu, nhảy thẳng tới câu kế tiếp còn dang dở (chưa gán nhãn, hoặc ở chế độ verify là câu đang đợi chọn nhãn). Hết thì quay vòng về đầu.
+
 ![Nhãn Negative được chọn](images/ser_04_label_neg.png)
 
 Nhãn đang chọn được tô nền màu tương ứng. Trạng thái bên dưới nút Lưu cho biết:
@@ -109,6 +111,7 @@ Nhãn đang chọn được tô nền màu tương ứng. Trạng thái bên dư
 | `Enter` | Lưu & chuyển file tiếp |
 | `J` | File tiếp theo |
 | `K` | File trước |
+| `N` | Nhảy tới câu chưa làm kế tiếp (chưa gán nhãn / đang đợi verify) |
 
 ---
 
